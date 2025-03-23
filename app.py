@@ -133,7 +133,6 @@ try:
             df['퇴사연도'] = df['퇴사일'].dt.year
         
         if menu == "현재 인원현황":
-            st.title("📊 현재 인원현황")
             # 기본 통계
             if '재직상태' in df.columns and '정규직전환일' in df.columns:
                 재직자 = len(df[df['재직상태'] == '재직'])
@@ -541,8 +540,6 @@ try:
                 st.markdown("<br>", unsafe_allow_html=True)
 
         elif menu == "연도별 인원 통계":
-            st.title("📊 연도별 인원 통계")
-            
             # 최근 5년간 인원 현황 분석
             st.markdown("##### ㆍ최근 5년간 입퇴사 현황")
             
@@ -635,10 +632,8 @@ try:
                 use_container_width=False
             )
 
-        else:  # 임직원 검색
-            st.title("🔍 임직원 검색")
-            # 연락처 검색
-            st.markdown("#### 연락처 검색")
+        else:  # 임직원 검색            # 연락처 검색
+            st.markdown("#### 🔍 연락처 검색")
             search_name = st.text_input("성명으로 검색", key="contact_search")
             
             if search_name:
@@ -654,7 +649,7 @@ try:
             st.markdown("---")
 
             # 생일자 검색
-            st.markdown("#### 생일자 검색")
+            st.markdown("#### 🔍생일자 검색")
             current_month = datetime.now().month
             birth_month = st.selectbox(
                 "생일 월 선택",
