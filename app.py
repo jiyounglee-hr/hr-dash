@@ -770,7 +770,7 @@ try:
                         }
                         </style>
                     """, unsafe_allow_html=True)
-                    contact_info = contact_df[['본부', '팀', 'E-Mail', '핸드폰', '주소']].reset_index(drop=True)
+                    contact_info = contact_df[['성명','본부', '팀', 'E-Mail', '핸드폰', '주소']].reset_index(drop=True)
                     contact_info.index = contact_info.index + 1
                     contact_info = contact_info.rename_axis('No.')
                     st.dataframe(contact_info.style.set_properties(**{'text-align': 'left'}), use_container_width=True)
@@ -780,7 +780,7 @@ try:
             st.markdown("---")
 
             # 생일자 검색
-            st.markdown("#### 🎂생일자 검색")
+            st.markdown("#### 🎂이달의 생일자")
             current_month = datetime.now().month
             birth_month = st.selectbox(
                 "생일 월 선택",
