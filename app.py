@@ -53,12 +53,15 @@ st.set_page_config(
 @st.cache_data
 def load_data():
     try:
+        # 현재 스크립트의 디렉토리 경로 가져오기
+        current_dir = os.path.dirname(os.path.abspath(__file__))
         # 자동으로 엑셀 파일 찾기
-        excel_files = [f for f in os.listdir('.') if f.endswith(('.xlsx', '.xls'))]
+        excel_files = [f for f in os.listdir(current_dir) if f.endswith(('.xlsx', '.xls'))]
         if excel_files:
             # 가장 최근 수정된 엑셀 파일 선택
-            latest_file = max(excel_files, key=os.path.getmtime)
-            df = pd.read_excel(latest_file)
+            latest_file = max(excel_files, key=lambda x: os.path.getmtime(os.path.join(current_dir, x)))
+            file_path = os.path.join(current_dir, latest_file)
+            df = pd.read_excel(file_path)
             return df
         else:
             st.warning("Excel 파일을 찾을 수 없습니다.")
