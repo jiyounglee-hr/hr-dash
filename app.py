@@ -8,6 +8,24 @@ from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.sharepoint.client_context import ClientContext
 from office365.sharepoint.files.file import File
 import io
+import requests
+from PIL import Image
+from io import BytesIO
+
+# 로고 이미지 다운로드 및 저장
+def download_logo():
+    logo_url = "https://img.notionusercontent.com/s3/prod-files-secure%2F9453ab34-9a3e-45a8-a6b2-ec7f1cefbd7f%2Fe3948c44-a232-43dd-9c54-c4142a1b670b%2Fneruophet_logo.png/size/w=410?exp=1743148492&sig=NsUB2koIL5t_QNcCpKuOvLIkxOQerZJIGKwNXV0a8dg&id=893029a6-2091-4dd3-872b-4b7cd8f94384&table=block"
+    try:
+        response = requests.get(logo_url)
+        img = Image.open(BytesIO(response.content))
+        # 이미지 크기 조정 (가로 100px)
+        img = img.resize((100, int(100 * img.size[1] / img.size[0])))
+        img.save("assets/logo.png")
+    except Exception as e:
+        st.error(f"로고 이미지를 다운로드하는 중 오류가 발생했습니다: {str(e)}")
+
+# 로고 다운로드
+download_logo()
 
 # 비밀번호 인증
 def check_password():
@@ -20,6 +38,18 @@ def check_password():
             del st.session_state["password"]  # Don't store password.
         else:
             st.session_state["password_correct"] = False
+
+    # 로고와 시스템 이름 표시
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.image("assets/logo.png", width=100)
+    with col2:
+        st.markdown("""
+            <h1 style='color: #1f77b4; margin-top: 20px;'>HRmate</h1>
+            <p style='color: #666; font-size: 0.9em;'>HRmate</p>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
 
     # First run or input not cleared.
     if "password_correct" not in st.session_state:
@@ -123,7 +153,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 제목
-st.sidebar.title("👥 임직원 현황")
+st.sidebar.title("👥 HR Friend")
 st.sidebar.markdown("---")
 
 # 네비게이션 메뉴
