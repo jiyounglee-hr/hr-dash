@@ -12,20 +12,84 @@ import requests
 from PIL import Image
 from io import BytesIO
 
-# 로고 이미지 다운로드 및 저장
-def download_logo():
-    logo_url = "https://img.notionusercontent.com/s3/prod-files-secure%2F9453ab34-9a3e-45a8-a6b2-ec7f1cefbd7f%2Fe3948c44-a232-43dd-9c54-c4142a1b670b%2Fneruophet_logo.png/size/w=410?exp=1743148492&sig=NsUB2koIL5t_QNcCpKuOvLIkxOQerZJIGKwNXV0a8dg&id=893029a6-2091-4dd3-872b-4b7cd8f94384&table=block"
-    try:
-        response = requests.get(logo_url)
-        img = Image.open(BytesIO(response.content))
-        # 이미지 크기 조정 (가로 100px)
-        img = img.resize((100, int(100 * img.size[1] / img.size[0])))
-        img.save("assets/logo.png")
-    except Exception as e:
-        st.error(f"로고 이미지를 다운로드하는 중 오류가 발생했습니다: {str(e)}")
+# 페이지 설정
+st.set_page_config(
+    page_title="HRmate",
+    page_icon="👥",
+    layout="wide"
+)
 
-# 로고 다운로드
-download_logo()
+# CSS 스타일 추가
+st.markdown("""
+    <style>
+    /* 비밀번호 입력 필드 스타일 */
+    .password-input [data-testid="stTextInput"] {
+        width: 150px !important;
+        max-width: 150px !important;
+        margin: 0 auto;
+    }
+    .password-input [data-testid="stTextInput"] input {
+        width: 150px !important;
+    }
+    /* 검색 입력 필드 스타일 */
+    .search-container [data-testid="stTextInput"] {
+        width: 100px !important;
+        max-width: 100px !important;
+        margin: 0;
+    }
+    .search-container [data-testid="stTextInput"] input {
+        width: 100px !important;
+    }
+    .divider {
+        max-width: 500px;
+        margin: 1rem auto;
+    }
+    .header-container {
+        position: relative;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+        text-align: center;
+    }
+    .logo-container {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 130px;
+    }
+    .title-container {
+        padding-top: 1rem;
+    }
+    .title-container h1 {
+        margin: 0;
+        color: #666;
+    }
+    .title-container p {
+        margin: 0.5rem 0 0 0;
+        color: #666;
+        font-size: 0.9em;
+    }
+    .search-container {
+        text-align: left;
+        padding-left: 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+def show_header():
+    """로고와 시스템 이름을 표시하는 함수"""
+    st.markdown("""
+        <div class="header-container">
+            <div class="logo-container">
+                <img src="https://neurophethr.notion.site/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fe3948c44-a232-43dd-9c54-c4142a1b670b%2Fneruophet_logo.png?table=block&id=893029a6-2091-4dd3-872b-4b7cd8f94384&spaceId=9453ab34-9a3e-45a8-a6b2-ec7f1cefbd7f&width=410&userId=&cache=v2" width="130">
+            </div>
+            <div class="title-container">
+                <h1>HRmate</h1>
+                <p>인원 현황 및 자동화 지원 시스템</p>
+            </div>
+        </div>
+        <div class="divider"><hr></div>
+    """, unsafe_allow_html=True)
 
 # 비밀번호 인증
 def check_password():
@@ -39,30 +103,29 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
 
-    # 로고와 시스템 이름 표시
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.image("assets/logo.png", width=100)
-    with col2:
-        st.markdown("""
-            <h1 style='color: #1f77b4; margin-top: 20px;'>HRmate</h1>
-            <p style='color: #666; font-size: 0.9em;'>HRmate</p>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-
     # First run or input not cleared.
     if "password_correct" not in st.session_state:
-        st.text_input(
-            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
-        )
+        show_header()
+        # 비밀번호 입력 필드를 중앙에 배치
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            st.markdown('<div class="password-input">', unsafe_allow_html=True)
+            st.text_input(
+                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
         return False
     elif not st.session_state["password_correct"]:
+        show_header()
         # Password not correct, show input + error.
-        st.text_input(
-            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
-        )
-        st.error("😕 비밀번호가 올바르지 않습니다")
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            st.markdown('<div class="password-input">', unsafe_allow_html=True)
+            st.text_input(
+                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+            st.error("😕 비밀번호가 올바르지 않습니다")
         return False
     else:
         # Password correct.
@@ -71,13 +134,6 @@ def check_password():
 # 비밀번호 확인
 if not check_password():
     st.stop()  # Do not continue if check_password() returned False.
-
-# 페이지 설정
-st.set_page_config(
-    page_title="인사팀 대시보드",
-    page_icon="👥",
-    layout="wide"
-)
 
 # 데이터 로드 함수
 @st.cache_data
@@ -153,7 +209,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 제목
-st.sidebar.title("👥 HR Friend")
+st.sidebar.title("👥 HRmate")
 st.sidebar.markdown("---")
 
 # 네비게이션 메뉴
@@ -692,15 +748,32 @@ try:
 
         else:  # 임직원 검색            # 연락처 검색
             st.markdown("#### 🔍 연락처 검색")
-            search_name = st.text_input("성명으로 검색", key="contact_search")
+            
+            # 검색 부분을 컬럼으로 나누기
+            search_col, space_col = st.columns([0.3, 0.7])
+            
+            with search_col:
+                st.markdown('<div class="search-container">', unsafe_allow_html=True)
+                search_name = st.text_input("성명으로 검색", key="contact_search")
+                st.markdown('</div>', unsafe_allow_html=True)
             
             if search_name:
                 contact_df = df[df['성명'].str.contains(search_name, na=False)]
                 if not contact_df.empty:
+                    st.markdown("""
+                        <style>
+                        .dataframe {
+                            text-align: left !important;
+                        }
+                        .dataframe td, .dataframe th {
+                            text-align: left !important;
+                        }
+                        </style>
+                    """, unsafe_allow_html=True)
                     contact_info = contact_df[['본부', '팀', 'E-Mail', '핸드폰', '주소']].reset_index(drop=True)
                     contact_info.index = contact_info.index + 1
                     contact_info = contact_info.rename_axis('No.')
-                    st.dataframe(contact_info, use_container_width=True)
+                    st.dataframe(contact_info.style.set_properties(**{'text-align': 'left'}), use_container_width=True)
                 else:
                     st.info("검색 결과가 없습니다.")
 
