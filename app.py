@@ -73,6 +73,10 @@ st.markdown("""
         text-align: left;
         padding-left: 0;
     }
+    /* 채용서포트 메뉴 스타일 */
+    .no-underline {
+        text-decoration: none !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -219,9 +223,6 @@ menu = st.sidebar.radio(
     index=0,
     format_func=lambda x: f"📊 {x}" if x == "현재 인원현황" else (f"📈 {x}" if x == "연도별 인원 통계" else f"{x}")
 )
-# 채용서포트 링크 추가
-st.sidebar.markdown("---")
-st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link">📋 채용서포트</a>', unsafe_allow_html=True)
 
 try:
     # 데이터 로드
