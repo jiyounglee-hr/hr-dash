@@ -600,8 +600,8 @@ try:
                 {'연도': 2025, '전체': get_year_end_headcount(df, 2025)[0], '정규직_전체': get_year_end_headcount(df, 2025)[1], '계약직_전체': get_year_end_headcount(df, 2025)[2], '정규직_입사': 7, '정규직_퇴사': 3, '계약직_입사': 1, '계약직_퇴사': 1}
             ])
             
-            # 그래프를 위한 컬럼 생성 (60:40 비율)
-            graph_col, space_col = st.columns([0.6, 0.4])
+            # 그래프를 위한 컬럼 생성 (50:50 비율)
+            graph_col, space_col = st.columns([0.5, 0.5])
             
             with graph_col:
                 # 전체 인원 그래프 생성

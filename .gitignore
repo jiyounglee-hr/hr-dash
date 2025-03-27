@@ -13,8 +13,4 @@ env/
 
 # IDE
 .vscode/
-.idea/
-
-# Excel files
-*.xlsx
-*.xls 
+.idea/ 
