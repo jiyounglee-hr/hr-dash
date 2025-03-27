@@ -9,6 +9,39 @@ from office365.sharepoint.client_context import ClientContext
 from office365.sharepoint.files.file import File
 import io
 
+# 비밀번호 인증
+def check_password():
+    """Returns `True` if the user had the correct password."""
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state["password"] == "03142016":
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store password.
+        else:
+            st.session_state["password_correct"] = False
+
+    # First run or input not cleared.
+    if "password_correct" not in st.session_state:
+        st.text_input(
+            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+        )
+        return False
+    elif not st.session_state["password_correct"]:
+        # Password not correct, show input + error.
+        st.text_input(
+            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+        )
+        st.error("😕 비밀번호가 올바르지 않습니다")
+        return False
+    else:
+        # Password correct.
+        return True
+
+# 비밀번호 확인
+if not check_password():
+    st.stop()  # Do not continue if check_password() returned False.
+
 # 페이지 설정
 st.set_page_config(
     page_title="인사팀 대시보드",
@@ -18,13 +51,17 @@ st.set_page_config(
 
 # 데이터 로드 함수
 @st.cache_data
-def load_data(uploaded_file=None):
+def load_data():
     try:
-        if uploaded_file is not None:
-            df = pd.read_excel(uploaded_file)
+        # 자동으로 엑셀 파일 찾기
+        excel_files = [f for f in os.listdir('.') if f.endswith(('.xlsx', '.xls'))]
+        if excel_files:
+            # 가장 최근 수정된 엑셀 파일 선택
+            latest_file = max(excel_files, key=os.path.getmtime)
+            df = pd.read_excel(latest_file)
             return df
         else:
-            st.warning("Excel 파일을 업로드해주세요.")
+            st.warning("Excel 파일을 찾을 수 없습니다.")
             return None
     except Exception as e:
         st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
@@ -94,21 +131,9 @@ menu = st.sidebar.radio(
     format_func=lambda x: f"📊 {x}" if x == "현재 인원현황" else (f"📈 {x}" if x == "연도별 인원 통계" else f"{x}")
 )
 
-# 사이드바 설정
-with st.sidebar:
-    
-    # 하단에 파일 업로드 추가
-    st.sidebar.markdown("---")  # 구분선 추가
-    st.sidebar.markdown("### 데이터 업데이트")
-    uploaded_file = st.sidebar.file_uploader(
-        "Excel 파일 업로드",
-        type=["xlsx", "xls"],
-        help="Excel 파일을 업로드해주세요."
-    )
-
 try:
     # 데이터 로드
-    df = load_data(uploaded_file)
+    df = load_data()
     
     if df is not None:
         # Excel 날짜 형식 변환 함수
@@ -649,7 +674,7 @@ try:
             st.markdown("---")
 
             # 생일자 검색
-            st.markdown("#### 🔍생일자 검색")
+            st.markdown("#### 🎂생일자 검색")
             current_month = datetime.now().month
             birth_month = st.selectbox(
                 "생일 월 선택",
