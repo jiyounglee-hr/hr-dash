@@ -222,6 +222,7 @@ menu = st.sidebar.radio(
 # 채용서포트 링크 추가
 st.sidebar.markdown("---")
 st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📋 채용서포트</a>', unsafe_allow_html=True)
+st.sidebar.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📰 PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
 try:
     # 데이터 로드
     df = load_data()
