@@ -908,21 +908,22 @@ try:
                         avg_salary = (min_salary + max_salary) / 2
 
                         # 분석 결과 표시
-                        st.markdown("<br><br>", unsafe_allow_html=True)
+                        st.markdown("<br>", unsafe_allow_html=True)
                         st.markdown("#### 📊 연봉 분석 결과")
                         
                         # 직군 정보 표시
                         st.markdown(f"**선택된 직군 정보:** {selected_job_category} - {job_role}")
                         # 연봉 정보 표시
                         st.markdown(f"""
-                        <div style="font-size: 0.9rem;">
+                        <div style="font-size: 1rem;">
                         <strong>현재 연봉 : {int(current_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp; </strong>
                         <strong>최소 연봉 : {int(min_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
                         <strong style="color: red;">평균 연봉 : {int(avg_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
                         <strong>최대 연봉 : {int(max_salary):,}만원</strong>
                         </div>
                         """, unsafe_allow_html=True)
-                        
+                        st.markdown("<br>", unsafe_allow_html=True)
+
                         # 컬럼으로 공간 분리
                         col1, col2 = st.columns([0.6, 0.4])
                         with col1:
