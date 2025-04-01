@@ -983,8 +983,8 @@ try:
                         # 연봉 보존율 계산
                         preservation_rate = (recommended_salary / current_salary) * 100
                         
-                        # 총보상 계산
-                        total_compensation = current_salary + other_salary
+                        # 최종보상 계산
+                        final_compensation = current_salary + other_salary
                         
                         # 제시금액 계산 로직
                         def calculate_suggested_salary(total_comp, min_salary, avg_salary, max_salary):
@@ -1005,7 +1005,7 @@ try:
                         
                         # 제시금액 계산
                         suggested_salary = calculate_suggested_salary(
-                            total_compensation, 
+                            final_compensation, 
                             min_salary, 
                             avg_salary, 
                             max_salary
@@ -1018,7 +1018,7 @@ try:
                         {candidate_name}님의 경력은 {years:.1f}년으로 {selected_job_category} 임금테이블 기준으로는 
                         기준연봉 {avg_salary:,.0f}만원 ~ 상위10% {max_salary:,.0f}만원까지 고려할 수 있습니다.
                         
-                        최종보상 {total_compensation:,.0f}만원, 기준(평균)연봉 {avg_salary:,.0f}만원을 고려했을 때 
+                        최종보상 {final_compensation:,.0f}만원, 기준(평균)연봉 {avg_salary:,.0f}만원을 고려했을 때 
                         제시금액은 {suggested_salary if isinstance(suggested_salary, str) else f'{suggested_salary:,.0f}만원'}이 어떨지 의견 드립니다.
 
                         [연봉산정]
@@ -1030,8 +1030,7 @@ try:
 
                         [참고]
                         - 제시금액 계산 로직
-                        """
-                        )
+                        """)
 
                         # 제시금액 계산 로직 조건 확인
                         if final_compensation * 1.1 < avg_salary:
