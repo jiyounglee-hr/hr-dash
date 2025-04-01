@@ -1031,25 +1031,16 @@ try:
                         [참고]
                         # 제시금액 계산 로직 조건 확인
                         if final_compensation * 1.1 < avg_salary:
-                            st.write("""
                             - 제시금액 계산 로직 : 최종보상 * 1.1 (10% 증액)으로 제안
-                            """)
                         elif final_compensation * 1.05 < avg_salary:
-                            st.write("""
                             - 제시금액 계산 로직 : 평균연봉으로 제안
-                            """)
                         elif final_compensation * 1.05 >= avg_salary:
-                            st.write("""
                             - 제시금액 계산 로직 :  최종보상 * 1.05까지 제안 (5% 증액)
-                            """)
                         elif final_compensation > avg_salary and final_compensation <= max_salary:
-                            st.write("""
+                          
                             - 제시금액 계산 로직 :  최종보상 * 1.02까지 제안 (2% 증액)
-                            """)
                         else:
-                            st.write("""
                             - 제시금액 계산 로직 :  별도 계산 필요
-                            """)
                         """)
                         # 상세 분석 결과 expander
                         with st.expander("📌 분석 기준 보기"):
