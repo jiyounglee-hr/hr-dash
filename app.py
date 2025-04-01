@@ -1037,7 +1037,6 @@ try:
                         elif final_compensation * 1.05 >= avg_salary:
                             - 제시금액 계산 로직 :  최종보상 * 1.05까지 제안 (5% 증액)
                         elif final_compensation > avg_salary and final_compensation <= max_salary:
-                          
                             - 제시금액 계산 로직 :  최종보상 * 1.02까지 제안 (2% 증액)
                         else:
                             - 제시금액 계산 로직 :  별도 계산 필요
