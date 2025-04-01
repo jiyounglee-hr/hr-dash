@@ -1002,7 +1002,7 @@ try:
                                 return int(increase_2)
                             else:
                                 return "[별도 계산 필요]"
-                        
+
                         # 제시금액 계산
                         suggested_salary = calculate_suggested_salary(
                             final_compensation, 
@@ -1011,7 +1011,18 @@ try:
                             max_salary
                         )
 
-                        # 협상(안) 보고서
+                        # 현재 상황에 맞는 제시금액 계산 로직 결정
+                        if final_compensation * 1.1 < avg_salary:
+                            calculation_logic = "제시금액 계산 로직 : 최종보상 * 1.1 (10% 증액)으로 제안"
+                        elif final_compensation * 1.05 < avg_salary:
+                            calculation_logic = "제시금액 계산 로직 : 평균연봉으로 제안"
+                        elif final_compensation * 1.05 >= avg_salary:
+                            calculation_logic = "제시금액 계산 로직 : 최종보상 * 1.05까지 제안 (5% 증액)"
+                        elif final_compensation > avg_salary and final_compensation <= max_salary:
+                            calculation_logic = "제시금액 계산 로직 : 최종보상 * 1.02까지 제안 (2% 증액)"
+                        else:
+                            calculation_logic = "제시금액 계산 로직 : 별도 계산 필요"
+
                         st.info(f"""
                         {position} 합격자 {candidate_name}님 처우 협상(안) 보고 드립니다.
 
@@ -1029,17 +1040,7 @@ try:
                         - 특이사항: {education_notes}
 
                         [참고]
-                        # 제시금액 계산 로직 조건 확인
-                        if final_compensation * 1.1 < avg_salary:
-                            - 제시금액 계산 로직 : 최종보상 * 1.1 (10% 증액)으로 제안
-                        elif final_compensation * 1.05 < avg_salary:
-                            - 제시금액 계산 로직 : 평균연봉으로 제안
-                        elif final_compensation * 1.05 >= avg_salary:
-                            - 제시금액 계산 로직 :  최종보상 * 1.05까지 제안 (5% 증액)
-                        elif final_compensation > avg_salary and final_compensation <= max_salary:
-                            - 제시금액 계산 로직 :  최종보상 * 1.02까지 제안 (2% 증액)
-                        else:
-                            - 제시금액 계산 로직 :  별도 계산 필요
+                        - {calculation_logic}
                         """)
                         # 상세 분석 결과 expander
                         with st.expander("📌 분석 기준 보기"):
