@@ -40,6 +40,13 @@ st.markdown("""
     .search-container [data-testid="stTextInput"] input {
         width: 100px !important;
     }
+    /* 금액 표시 스타일 */
+    [data-testid="stMetricValue"] {
+        font-size: 0.9rem !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.8rem !important;
+    }
     .divider {
         max-width: 500px;
         margin: 1rem auto;
@@ -97,7 +104,7 @@ def check_password():
 
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if st.session_state["password"] == "0314!":
+        if st.session_state.get("password") == "0314!":
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # Don't store password.
         else:
@@ -214,14 +221,15 @@ st.sidebar.markdown("---")
 
 # 네비게이션 메뉴
 menu = st.sidebar.radio(
-    "메뉴",
-    ["현재 인원현황", "연도별 인원 통계", "🔍 임직원 검색"],
+    " ",
+    ["현재 인원현황", "연도별 인원 통계", "🔍 임직원 검색", "📋 채용_처우협상"],
     index=0,
     format_func=lambda x: f"📊 {x}" if x == "현재 인원현황" else (f"📈 {x}" if x == "연도별 인원 통계" else f"{x}")
 )
 # 채용서포트 링크 추가
 st.sidebar.markdown("---")
-st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📋 채용서포트</a>', unsafe_allow_html=True)
+st.sidebar.markdown("##### 참고 사이트")
+st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📋 채용(이력서 분석)</a>', unsafe_allow_html=True)
 st.sidebar.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📰 PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
 try:
     # 데이터 로드
@@ -749,8 +757,8 @@ try:
                 use_container_width=False
             )
 
-        else:  # 임직원 검색            # 연락처 검색
-            st.markdown("#### 🔍 연락처 검색")
+        elif menu == "🔍 임직원 검색":
+            st.markdown("##### 🔍 연락처 검색")
             
             # 검색 부분을 컬럼으로 나누기
             search_col, space_col = st.columns([0.3, 0.7])
@@ -783,7 +791,7 @@ try:
             st.markdown("---")
 
             # 생일자 검색
-            st.markdown("#### 🎂이달의 생일자")
+            st.markdown("##### 🎂이달의 생일자")
             current_month = datetime.now().month
             birth_month = st.selectbox(
                 "생일 월 선택",
@@ -813,6 +821,233 @@ try:
                     st.dataframe(birthday_info, use_container_width=True)
                 else:
                     st.info(f"{birth_month}월 재직자 중 생일자가 없습니다.")
+
+        elif menu == "📋 채용_처우협상":
+            st.markdown("##### 🔎 처우 기본정보")
+            
+            # 직군 매핑 정의
+            job_mapping = {
+                "연구직": "직군1",
+                "개발직": "직군2",
+                "임상연구, QA": "직군2",
+                "연구기획": "직군3",
+                "디자인": "직군3",
+                "인증(RA), SV, SCM": "직군3",
+                "마케팅": "직군3",
+                "기획": "직군3",
+                "기술영업 / SE(5년 이상)": "직군3",
+                "경영기획(전략,회계,인사,재무,법무,보안)": "직군3",
+                "지원(연구, 기술, 경영 지원 등)": "직군4",
+                "일반영업 /SE(5년 미만)": "직군4",
+                "고객지원(CS)": "직군5",
+                "레이블링": "직군5"
+            }
+            
+            # 직군 상세 목록
+            job_roles = list(job_mapping.keys())
+            
+            # 입력 폼 생성
+            with st.form("salary_form"):
+                # 1줄: 포지션명, 후보자명
+                col1, col2 = st.columns(2)
+                with col1:
+                    position = st.text_input("포지션명", "")
+                with col2:
+                    candidate_name = st.text_input("후보자명", "")
+                
+                # 2줄: 직군선택
+                job_role = st.selectbox("직군 선택", job_roles)
+                
+                # 3줄: 현재연봉, 기타 처우, 희망연봉
+                col3, col4, col5 = st.columns(3)
+                with col3:
+                    current_salary = st.number_input("현재연봉 (만원)", min_value=0, step=100)
+                with col4:
+                    other_salary = st.number_input("기타 보상상 (만원)", min_value=0, step=100)
+                with col5:
+                    desired_salary = st.number_input("희망연봉 (만원)", min_value=0, step=100)
+                
+                # 4줄: 인정경력 연차, 학력특이사항
+                col6, col7 = st.columns(2)
+                with col6:
+                    years = st.number_input("인정경력 (년)", min_value=-4.0, value=0.0, step=0.1, format="%.1f")
+                with col7:
+                    education_notes = st.text_input("특이사항", "")
+                
+                # 전체 경력을 년 단위로 변환 (분석용) - 반올림 적용
+                years_exp = round(years)
+                
+                
+                # 분석하기 버튼
+                submitted = st.form_submit_button("분석하기")
+
+                if submitted:
+                    try:
+                        # salary_table.xlsx 파일 읽기
+                        salary_table = pd.read_excel("salary_table.xlsx")
+                        
+                        # 선택된 직군상세에 해당하는 직군 가져오기
+                        selected_job_category = job_mapping[job_role]
+                        
+                        # 해당 직군과 연차에 맞는 데이터 필터링
+                        filtered_data = salary_table[
+                            (salary_table['직군'] == selected_job_category) & 
+                            (salary_table['연차'] == years_exp)
+                        ]
+                        
+                        if filtered_data.empty:
+                            st.warning(f"선택하신 직군 '{job_role}' ({selected_job_category})과 연차 {years_exp}년에 해당하는 데이터가 없습니다.")
+                            st.stop()
+                        
+                        # 첫 번째 행 선택
+                        filtered_data = filtered_data.iloc[0]
+                        
+                        # 해당 직군의 임금 데이터 가져오기
+                        min_salary = filtered_data['최소연봉']
+                        max_salary = filtered_data['최대연봉']
+                        avg_salary = (min_salary + max_salary) / 2
+
+                        # 분석 결과 표시
+                        st.markdown("<br><br>", unsafe_allow_html=True)
+                        st.markdown("#### 📊 연봉 분석 결과")
+                        
+                        # 직군 정보 표시
+                        st.markdown(f"**선택된 직군 정보:** {selected_job_category} - {job_role}")
+                        # 연봉 정보 표시
+                        st.markdown(f"""
+                        <div style="font-size: 0.9rem;">
+                        <strong>현재 연봉 : {int(current_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp; </strong>
+                        <strong>최소 연봉 : {int(min_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
+                        <strong style="color: red;">평균 연봉 : {int(avg_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
+                        <strong>최대 연봉 : {int(max_salary):,}만원</strong>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # 컬럼으로 공간 분리
+                        col1, col2 = st.columns([0.6, 0.4])
+                        with col1:
+                            # salary_table 관련 데이터 표시
+                            related_years = [years_exp-1, years_exp, years_exp+1]
+                            related_data = salary_table[
+                                (salary_table['직군'] == selected_job_category) & 
+                                (salary_table['연차'].isin(related_years))
+                            ].sort_values('연차')
+                            
+                            if not related_data.empty:
+                                # 평균연봉 계산
+                                related_data['평균연봉'] = (related_data['최소연봉'] + related_data['최대연봉']) / 2
+                                # 모든 연봉 컬럼을 정수로 변환
+                                related_data['최소연봉'] = related_data['최소연봉'].astype(int)
+                                related_data['평균연봉'] = related_data['평균연봉'].astype(int)
+                                related_data['최대연봉'] = related_data['최대연봉'].astype(int)
+                                
+                                st.dataframe(
+                                    related_data[['연차', '최소연봉', '평균연봉', '최대연봉']].rename(
+                                        columns={
+                                            '연차': '인정경력',
+                                            '최소연봉': '최소연봉(만원)',
+                                            '평균연봉': '평균연봉(만원)',
+                                            '최대연봉': '최대연봉(만원)'
+                                        }
+                                    ),
+                                    hide_index=True,
+                                    column_config={
+                                        '인정경력': st.column_config.Column(width=80),
+                                        '최소연봉(만원)': st.column_config.Column(width=100),
+                                        '평균연봉(만원)': st.column_config.Column(width=100),
+                                        '최대연봉(만원)': st.column_config.Column(width=100)
+                                    }
+                                )
+                            else:
+                                st.info("해당 직군의 임금테이블 데이터가 없습니다.")
+                        
+                        with col2:
+                            st.write("")  # 빈 공간
+
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        # 2. 상세 분석 결과
+                        st.markdown("##### 💡 연봉 책정 가이드")
+                        
+                        analysis_text = ""
+                        
+                        # 임금 테이블 기준 분석
+                        if current_salary < min_salary:
+                            analysis_text += f"⚠️ 현재 연봉(기본연봉)이 시장 최소값보다 {min_salary - current_salary:,.0f}만원 낮습니다.\n"
+                            recommended_salary = min_salary
+                        elif current_salary > max_salary:
+                            analysis_text += f"⚠️ 현재 연봉(기본연봉)이 시장 최대값보다 {current_salary - max_salary:,.0f}만원 높습니다.\n"
+                            recommended_salary = max_salary
+                        else:
+                            analysis_text += "✅ 현재 연봉(기본연봉)이 시장 범위 내에 있습니다.\n"
+                            recommended_salary = current_salary
+                        
+                        # 연봉 보존율 계산
+                        preservation_rate = (recommended_salary / current_salary) * 100
+                        
+                        # 총보상 계산
+                        total_compensation = current_salary + other_salary
+                        
+                        # 제시금액 계산 로직
+                        def calculate_suggested_salary(total_comp, min_salary, avg_salary, max_salary):
+                            increase_10 = total_comp * 1.1
+                            increase_5 = total_comp * 1.05
+                            increase_2 = total_comp * 1.02
+                            
+                            if increase_10 <= avg_salary:
+                                return int(increase_10)
+                            elif increase_5 < avg_salary:
+                                return int(avg_salary)
+                            elif increase_5 >= avg_salary and total_comp <= avg_salary:
+                                return int(increase_5)
+                            elif total_comp > avg_salary and total_comp <= max_salary:
+                                return int(increase_2)
+                            else:
+                                return "[별도 계산 필요]"
+                        
+                        # 제시금액 계산
+                        suggested_salary = calculate_suggested_salary(
+                            total_compensation, 
+                            min_salary, 
+                            avg_salary, 
+                            max_salary
+                        )
+
+                        # 협상(안) 보고서
+                        st.info(f"""
+                        {position} 합격자 {candidate_name}님 처우 협상(안) 보고 드립니다.
+
+                        {candidate_name}님의 경력은 {years:.1f}년으로 {selected_job_category} 임금테이블 기준으로는 
+                        기준연봉 {avg_salary:,.0f}만원 ~ 상위10% {max_salary:,.0f}만원까지 고려할 수 있습니다.
+                        
+                        최종보상 {total_compensation:,.0f}만원, 기준(평균)연봉 {avg_salary:,.0f}만원을 고려했을 때 
+                        제시금액은 {suggested_salary if isinstance(suggested_salary, str) else f'{suggested_salary:,.0f}만원'}이 어떨지 의견 드립니다.
+
+                        [연봉산정]
+                        - 인정경력: {years:.1f}년 (인정경력 기준: {years_exp}년)
+                        - 최종연봉: 기본연봉 {current_salary:,.0f}만원 + 기타 {other_salary:,.0f}만원
+                        - 희망연봉: {desired_salary:,.0f}만원
+                        - 기준(임금테이블) 연봉: {avg_salary:,.0f}만원 (최소 연봉: {min_salary:,.0f}만원, 최대 연봉: {max_salary:,.0f}만원)
+                        - 특이사항: {education_notes}
+                        """)
+                        
+                        # 상세 분석 결과 expander
+                        with st.expander("분석 기준 보기"):
+                            st.info(f"""
+                            💰 추천 연봉 범위: {recommended_salary:,.0f}만원 
+                            (현재 연봉 대비 {preservation_rate:.1f}% 수준)
+                            
+                            📌 판단 근거:
+                            {analysis_text}
+                            
+                            🔍 고려사항:
+                            1. 임금 테이블 기준: {min_salary:,.0f}만원 ~ {max_salary:,.0f}만원
+                            2. 현재 연봉: {current_salary:,.0f}만원
+                            3. 기타 보상: {other_salary:,.0f}만원
+                            4. 희망 연봉: {desired_salary:,.0f}만원
+                            5. 특이사항: {education_notes}
+                            """)
+                    except Exception as e:
+                        st.error(f"임금 테이블 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
 
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}") 
