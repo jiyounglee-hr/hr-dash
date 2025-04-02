@@ -979,12 +979,11 @@ try:
                         else:
                             analysis_text += "✅ 현재 연봉(기본연봉)이 시장 범위 내에 있습니다.\n"
                             recommended_salary = current_salary
-                        
-                        # 연봉 보존율 계산
-                        preservation_rate = (recommended_salary / current_salary) * 100
-                        
+                                                
                         # 최종보상 계산
                         final_compensation = current_salary + other_salary
+                        # 연봉 보존율 계산
+                        preservation_rate = (recommended_salary / final_compensation) * 100
                         
                         # 제시금액 계산 로직
                         def calculate_suggested_salary(total_comp, min_salary, avg_salary, max_salary):
@@ -1045,7 +1044,7 @@ try:
                         # 상세 분석 결과 expander
                         with st.expander("📌 분석 기준 보기"):
                             st.info(f"""
-                            1. 기존 연봉 보존율: {preservation_rate:.1f}%
+                            1. 기존 보상총액 보존율: {preservation_rate:.1f}%
                             2. 제시금액 계산                 
                                 - 최종보상 * 1.1 < 평균연봉 : 최종보상 * 1.1 정도 제안 (10% 증액) 
                                 - 최종보상 * 1.05 < 평균연봉 : 평균연봉 정도 제안 (5% 증액) 
