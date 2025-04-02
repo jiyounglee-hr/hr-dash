@@ -982,8 +982,6 @@ try:
                                                 
                         # 최종보상 계산
                         final_compensation = current_salary + other_salary
-                        # 연봉 보존율 계산
-                        preservation_rate = (recommended_salary / final_compensation) * 100
                         
                         # 제시금액 계산 로직
                         def calculate_suggested_salary(total_comp, min_salary, avg_salary, max_salary):
@@ -1009,6 +1007,8 @@ try:
                             avg_salary, 
                             max_salary
                         )
+                        # 연봉 보존율 계산
+                        preservation_rate = (suggested_salary / final_compensation) * 100
 
                         # 현재 상황에 맞는 제시금액 계산 로직 결정
                         if final_compensation * 1.1 < avg_salary:
