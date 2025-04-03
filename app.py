@@ -222,7 +222,7 @@ st.sidebar.markdown("---")
 # 네비게이션 메뉴
 menu = st.sidebar.radio(
     " ",
-    ["현재 인원현황", "연도별 인원 통계", "🔍 임직원 검색", "📋 채용_처우협상"],
+    ["현재 인원현황", "연도별 인원 통계", "🔍 임직원 검색", "🏦 기관제출용 인원현황", "📋 채용_처우협상"],
     index=0,
     format_func=lambda x: f"📊 {x}" if x == "현재 인원현황" else (f"📈 {x}" if x == "연도별 인원 통계" else f"{x}")
 )
@@ -821,6 +821,185 @@ try:
                     st.dataframe(birthday_info, use_container_width=True)
                 else:
                     st.info(f"{birth_month}월 재직자 중 생일자가 없습니다.")
+
+        elif menu == "🏦 기관제출용 인원현황":
+            st.markdown("##### 🏦 기관제출용 인원현황")
+            
+            # 데이터 로드
+            df = load_data()
+            if df is not None:
+                # 날짜 컬럼 변환 함수
+                def convert_date(date_value):
+                    if pd.isna(date_value):
+                        return pd.NaT
+                    try:
+                        # 엑셀 숫자 형식의 날짜 처리
+                        if isinstance(date_value, (int, float)):
+                            return pd.Timestamp('1899-12-30') + pd.Timedelta(days=int(date_value))
+                        
+                        # 문자열로 변환
+                        date_str = str(date_value)
+                        
+                        # 여러 날짜 형식 시도
+                        formats = ['%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d', '%Y%m%d']
+                        for fmt in formats:
+                            try:
+                                return pd.to_datetime(date_str, format=fmt)
+                            except:
+                                continue
+                        
+                        # 모든 형식이 실패하면 기본 변환 시도
+                        return pd.to_datetime(date_str)
+                    except:
+                        return pd.NaT
+
+                # 날짜 컬럼 변환
+                df['입사일'] = df['입사일'].apply(convert_date)
+                df['퇴사일'] = df['퇴사일'].apply(convert_date)
+                
+                
+                # 조회 기준일 설정
+                current_year = datetime.now().year
+                current_month = datetime.now().month
+                years = list(range(2016, current_year + 1))
+                years.sort(reverse=True)  # 내림차순 정렬
+                
+                col1, col2, col3 = st.columns([0.3, 0.3, 0.4])
+                with col1:
+                    selected_year = st.selectbox("조회년도", years, index=0)
+                with col2:
+                    months = list(range(1, 13))
+                    selected_month = st.selectbox("조회월", months, index=current_month-1)
+                with col3:
+                    st.write("")  # 공백 컬럼
+                
+                # 선택된 년월의 마지막 날짜 계산
+                last_day = pd.Timestamp(f"{selected_year}-{selected_month:02d}-01") + pd.offsets.MonthEnd(0)
+                               
+                # 기준일에 재직중인 직원 필터링
+                current_employees = df[
+                    (df['입사일'].notna()) & 
+                    (df['입사일'] <= last_day) & 
+                    ((df['퇴사일'].isna()) | 
+                     (df['퇴사일'] == pd.Timestamp('2050-12-31')) | 
+                     (df['퇴사일'] >= last_day))
+                ]
+                
+                st.markdown("---")
+                
+                if not df[df['입사일'] <= last_day].empty:
+                    # 구분별 인원 현황 계산 및 표시
+                    # 구분1: 주주간담회 등 IR팀 자료
+                    st.markdown("1. 주주간담회 등 IR팀 자료 작성용")
+                    group1_stats = current_employees['구분1'].value_counts().reset_index()
+                    group1_stats.columns = ['구분', '인원수']
+                    total_count1 = group1_stats['인원수'].sum()
+                    
+                    # '임원'이 있는 행을 찾아서 첫 번째로 이동
+                    임원_row = group1_stats[group1_stats['구분'] == '임원']
+                    other_rows = group1_stats[group1_stats['구분'] != '임원']
+                    group1_stats = pd.concat([임원_row, other_rows]).reset_index(drop=True)
+                    
+                    group1_stats = group1_stats.T  # 행과 열을 바꿈
+                    group1_stats.columns = group1_stats.iloc[0]  # 첫 번째 행을 컬럼명으로 설정
+                    group1_stats = group1_stats.iloc[1:]  # 첫 번째 행 제외
+                    group1_stats['총인원'] = total_count1  # 총인원 열 추가
+                    st.dataframe(
+                        group1_stats,
+                        use_container_width=False,
+                        width=900,
+                        column_config={col: st.column_config.NumberColumn(col, width=50) for col in group1_stats.columns}
+                    )
+                    
+                    # 구분2: 투자자 사업현황 보고1
+                    st.markdown("2. 투자자 사업현황 보고")
+                    group2_stats = current_employees['구분2'].value_counts().reset_index()
+                    group2_stats.columns = ['구분', '인원수']
+                    total_count2 = group2_stats['인원수'].sum()
+                    
+                    # '임원'이 있는 행을 찾아서 첫 번째로 이동
+                    임원_row = group2_stats[group2_stats['구분'] == '임원']
+                    other_rows = group2_stats[group2_stats['구분'] != '임원']
+                    group2_stats = pd.concat([임원_row, other_rows]).reset_index(drop=True)
+                    
+                    group2_stats = group2_stats.T  # 행과 열을 바꿈
+                    group2_stats.columns = group2_stats.iloc[0]  # 첫 번째 행을 컬럼명으로 설정
+                    group2_stats = group2_stats.iloc[1:]  # 첫 번째 행 제외
+                    group2_stats['총인원'] = total_count2  # 총인원 열 추가
+                    st.dataframe(
+                        group2_stats,
+                        use_container_width=False,
+                        width=600,
+                        column_config={col: st.column_config.NumberColumn(col, width=50) for col in group2_stats.columns}
+                    )
+                    
+                    # 구분3: 의료기기 생산 및 수출·수입·수리실적보고
+                    st.markdown("3. 의료기기 생산 및 수출·수입·수리실적보고")
+                    group3_stats = current_employees['구분3'].value_counts().reset_index()
+                    group3_stats.columns = ['구분', '인원수']
+                    total_count3 = group3_stats['인원수'].sum()
+                    
+                    # '임원'이 있는 행을 찾아서 첫 번째로 이동
+                    임원_row = group3_stats[group3_stats['구분'] == '임원']
+                    other_rows = group3_stats[group3_stats['구분'] != '임원']
+                    group3_stats = pd.concat([임원_row, other_rows]).reset_index(drop=True)
+                    
+                    group3_stats = group3_stats.T  # 행과 열을 바꿈
+                    group3_stats.columns = group3_stats.iloc[0]  # 첫 번째 행을 컬럼명으로 설정
+                    group3_stats = group3_stats.iloc[1:]  # 첫 번째 행 제외
+                    group3_stats['총인원'] = total_count3  # 총인원 열 추가
+                    st.dataframe(
+                        group3_stats,
+                        use_container_width=False,
+                        width=700,
+                        column_config={col: st.column_config.NumberColumn(col, width=50) for col in group3_stats.columns}
+                    )
+                    
+                    # 인원상세 목록
+                    st.markdown("###### 🧑 인원상세")
+                    detail_columns = ['성명', '본부', '실', '팀', '고용구분', '입사일', '재직상태', '구분1', '구분2', '구분3']
+                    detail_df = current_employees[detail_columns].copy()
+                    detail_df['입사일'] = detail_df['입사일'].dt.strftime('%Y-%m-%d')
+                    
+                    # 인덱스를 1부터 시작하는 번호로 리셋
+                    detail_df = detail_df.reset_index(drop=True)
+                    detail_df.index = detail_df.index + 1
+                    detail_df.index.name = 'No'
+                    detail_df = detail_df.reset_index()
+                    
+                    st.dataframe(
+                        detail_df,
+                        hide_index=True,
+                        column_config={
+                            "No": st.column_config.NumberColumn("No", width=50),
+                            "성명": st.column_config.TextColumn("성명", width=80),
+                            "본부": st.column_config.TextColumn("본부", width=120),
+                            "실": st.column_config.TextColumn("실", width=120),
+                            "팀": st.column_config.TextColumn("팀", width=120),
+                            "고용구분": st.column_config.TextColumn("고용구분", width=80),
+                            "입사일": st.column_config.TextColumn("입사일", width=100),
+                            "재직상태": st.column_config.TextColumn("재직상태", width=80),
+                            "구분1": st.column_config.TextColumn("구분1", width=120),
+                            "구분2": st.column_config.TextColumn("구분2", width=120),
+                            "구분3": st.column_config.TextColumn("구분3", width=120)
+                        }
+                    )
+                    
+                    # 엑셀 다운로드 버튼
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        detail_df.to_excel(writer, index=False)
+                    excel_data = output.getvalue()
+                    st.download_button(
+                        label="📥 엑셀 다운로드",
+                        data=excel_data,
+                        file_name=f"기관제출용_인원현황_{selected_year}{selected_month:02d}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                else:
+                    st.warning(f"{selected_year}년 {selected_month}월 데이터가 없습니다.")
+            else:
+                st.error("데이터를 불러오는 중 오류가 발생했습니다.")
 
         elif menu == "📋 채용_처우협상":
             st.markdown("##### 🔎 처우 기본정보")
