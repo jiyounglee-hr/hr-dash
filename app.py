@@ -781,7 +781,13 @@ try:
                         }
                         </style>
                     """, unsafe_allow_html=True)
-                    contact_info = contact_df[['성명','본부', '팀', 'E-Mail', '핸드폰', '주소']].reset_index(drop=True)
+                    
+                    # 생년월일 컬럼을 포함하여 표시할 컬럼 선택
+                    contact_info = contact_df[['성명', '생년월일', '본부', '팀', '직위', 'E-Mail', '핸드폰', '주소']].reset_index(drop=True)
+                    
+                    # 생년월일 형식 변환 (datetime 형식으로 변환 후 YYYY-MM-DD 형식으로 표시)
+                    contact_info['생년월일'] = pd.to_datetime(contact_info['생년월일']).dt.strftime('%Y-%m-%d')
+                    
                     contact_info.index = contact_info.index + 1
                     contact_info = contact_info.rename_axis('No.')
                     st.dataframe(contact_info.style.set_properties(**{'text-align': 'left'}), use_container_width=True)
