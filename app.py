@@ -1299,8 +1299,7 @@ try:
                         
                         # 필터링된 데이터가 있을 때만 표시
                         if not filtered_df.empty:
-                                                        # 월별 본부별 초과근무 합계 표시
-                            st.markdown("---")                            
+                            # 월별 본부별 초과근무 합계 표시                                                      
                             # 시간을 숫자로 변환
                             filtered_df['초과시간'] = filtered_df['초과시간'].apply(lambda x: float(x.hour) + float(x.minute)/60 if hasattr(x, 'hour') and hasattr(x, 'minute') else float(x))
                             
@@ -1336,6 +1335,7 @@ try:
                                 )
                             # 이름과 이메일로 그룹화하여 초과근무 내역과 시간 합계 계산
                             # 시간을 숫자로 변환하여 합산
+                            st.markdown("---")  
                             filtered_df['초과시간'] = filtered_df['초과시간'].apply(lambda x: float(x.hour) + float(x.minute)/60 if hasattr(x, 'hour') and hasattr(x, 'minute') else float(x))
                             
                             # 초과근무 내용 컬럼명 확인
