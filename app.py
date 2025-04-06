@@ -80,27 +80,6 @@ st.markdown("""
         text-align: left;
         padding-left: 0;
     }
-    /* 기존 스타일 유지 */
-    
-    /* 사이드바 스타일 추가 */
-    [data-testid="stSidebar"] {
-        min-width: 200px !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
-        font-size: 0.8rem !important;
-    }
-    [data-testid="stSidebar"] .stRadio [role="radiogroup"] label {
-        font-size: 0.8rem !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-    [data-testid="stSidebar"] a {
-        font-size: 0.8rem !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -233,6 +212,25 @@ st.markdown("""
     .stRadio [role=radiogroup]{
         padding-top: 0px;
     }
+     /* 사이드바 스타일 추가 */
+    [data-testid="stSidebar"] {
+        min-width: 200px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+        font-size: 0.8rem !important;
+    }
+    [data-testid="stSidebar"] .stRadio [role="radiogroup"] label {
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    [data-testid="stSidebar"] a {
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -240,30 +238,25 @@ st.markdown("""
 st.sidebar.title("👥 HRmate")
 st.sidebar.markdown("---")
 
-# 기본 메뉴 설정
-if 'menu' not in st.session_state:
-    st.session_state.menu = "📊 현재 인원현황"
-menu = st.session_state.menu
-
 # HR Data 섹션
 st.sidebar.markdown("### HR Data")
 if st.sidebar.button("📊 현재 인원현황", use_container_width=True):
-    menu = "📊 현재 인원현황"
+    st.session_state.menu = "📊 현재 인원현황"
 if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
-    menu = "📈 연도별 인원 통계"
+    st.session_state.menu = "📈 연도별 인원 통계"
 if st.sidebar.button("🔍 임직원 검색", use_container_width=True):
-    menu = "🔍 임직원 검색"
+    st.session_state.menu = "🔍 임직원 검색"
 
 st.sidebar.markdown("---")
 
 # HR Support 섹션
 st.sidebar.markdown("### HR Support")
 if st.sidebar.button("🏦 기관제출용 인원현황", use_container_width=True):
-    menu = "🏦 기관제출용 인원현황"
+    st.session_state.menu = "🏦 기관제출용 인원현황"
 if st.sidebar.button("📋 채용_처우협상", use_container_width=True):
-    menu = "📋 채용_처우협상"
+    st.session_state.menu = "📋 채용_처우협상"
 if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
-    menu = "⏰ 초과근무 조회"
+    st.session_state.menu = "⏰ 초과근무 조회"
 
 # 채용서포트 링크 추가
 st.sidebar.markdown("---")
@@ -271,7 +264,10 @@ st.sidebar.markdown("##### 참고 사이트")
 st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📋 채용(이력서 분석)</a>', unsafe_allow_html=True)
 st.sidebar.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📰 PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
 
-
+# 기본 메뉴 설정
+if 'menu' not in st.session_state:
+    st.session_state.menu = "📊 현재 인원현황"
+menu = st.session_state.menu
 
 try:
     # 데이터 로드
@@ -1303,6 +1299,41 @@ try:
                         
                         # 필터링된 데이터가 있을 때만 표시
                         if not filtered_df.empty:
+                                                        # 월별 본부별 초과근무 합계 표시
+                            st.markdown("---")                            
+                            # 시간을 숫자로 변환
+                            filtered_df['초과시간'] = filtered_df['초과시간'].apply(lambda x: float(x.hour) + float(x.minute)/60 if hasattr(x, 'hour') and hasattr(x, 'minute') else float(x))
+                            
+                            # 피벗 테이블 생성
+                            pivot_df = pd.pivot_table(
+                                filtered_df,
+                                values='초과시간',
+                                index='연월구분',
+                                columns='본부',
+                                aggfunc='sum',
+                                fill_value=0
+                            )
+                            
+                            # 전체 합계 열 추가
+                            pivot_df['전체 합계'] = pivot_df.sum(axis=1)
+                            
+                            # 본부별 인원수 계산
+                            employee_count = filtered_df.groupby('본부')['이름'].nunique()
+                            employee_count['전체 합계'] = employee_count.sum()
+                            
+                            # 인원수 행 추가
+                            pivot_df.loc['인원수'] = employee_count
+                            
+                            # 시간을 소수점 한 자리로 변환 (인원수 행 제외)
+                            for col in pivot_df.columns:
+                                pivot_df.loc[pivot_df.index != '인원수', col] = pivot_df.loc[pivot_df.index != '인원수', col].apply(lambda x: f"{float(x):.1f}시간")
+                            
+                            # 피벗 테이블이 비어있지 않을 때만 표시
+                            if not pivot_df.empty:
+                                st.dataframe(
+                                    pivot_df,
+                                    use_container_width=True,
+                                )
                             # 이름과 이메일로 그룹화하여 초과근무 내역과 시간 합계 계산
                             # 시간을 숫자로 변환하여 합산
                             filtered_df['초과시간'] = filtered_df['초과시간'].apply(lambda x: float(x.hour) + float(x.minute)/60 if hasattr(x, 'hour') and hasattr(x, 'minute') else float(x))
@@ -1371,9 +1402,9 @@ try:
                             st.dataframe(
                                 result_df,
                                 column_config={
-                                    "이름": st.column_config.TextColumn("이름", width=100),
-                                    "초과근무시간 합": st.column_config.TextColumn("초과근무시간 합", width=100),
-                                    "초과근무 내역": st.column_config.TextColumn("초과근무 내역", width=300),
+                                    "이름": st.column_config.TextColumn("이름", width=50),
+                                    "초과근무시간 합": st.column_config.TextColumn("초과근무시간 합", width=70),
+                                    "초과근무 내역": st.column_config.TextColumn("초과근무 내역", width=400),
                                     "이메일": st.column_config.TextColumn("이메일", width=100)
                                 },
                                 hide_index=False,
@@ -1386,9 +1417,9 @@ try:
                                 result_df.to_excel(writer, sheet_name='초과근무내역', index=True, index_label='No')
                                 # 열 너비 자동 조정
                                 worksheet = writer.sheets['초과근무내역']
-                                worksheet.column_dimensions['B'].width = 15  # 이름
+                                worksheet.column_dimensions['B'].width = 10 # 이름
                                 worksheet.column_dimensions['C'].width = 15  # 초과근무시간 합
-                                worksheet.column_dimensions['D'].width = 50  # 초과근무 내역
+                                worksheet.column_dimensions['D'].width = 70  # 초과근무 내역
                                 worksheet.column_dimensions['E'].width = 25  # 이메일
                             excel_data = output.getvalue()
                                     
@@ -1399,43 +1430,7 @@ try:
                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             )
                             
-                            # 월별 본부별 초과근무 합계 표시
-                            st.markdown("---")                            
-                            # 시간을 숫자로 변환
-                            filtered_df['초과시간'] = filtered_df['초과시간'].apply(lambda x: float(x.hour) + float(x.minute)/60 if hasattr(x, 'hour') and hasattr(x, 'minute') else float(x))
-                            
-                            # 피벗 테이블 생성
-                            pivot_df = pd.pivot_table(
-                                filtered_df,
-                                values='초과시간',
-                                index='연월구분',
-                                columns='본부',
-                                aggfunc='sum',
-                                fill_value=0
-                            )
-                            
-                            # 전체 합계 열 추가
-                            pivot_df['전체 합계'] = pivot_df.sum(axis=1)
-                            
-                            # 본부별 인원수 계산
-                            employee_count = filtered_df.groupby('본부')['이름'].nunique()
-                            employee_count['전체 합계'] = employee_count.sum()
-                            
-                            # 인원수 행 추가
-                            pivot_df.loc['인원수'] = employee_count
-                            
-                            # 시간을 시:분 형식으로 변환 (인원수 행 제외)
-                            for col in pivot_df.columns:
-                                if pivot_df.index[-1] != '인원수':  # 마지막 행이 인원수가 아닌 경우에만 변환
-                                    pivot_df[col] = pivot_df[col].apply(lambda x: f"{int(x)}시간 {int((x % 1) * 60)}분")
-                            
-                            # 피벗 테이블이 비어있지 않을 때만 표시
-                            if not pivot_df.empty:
-                                st.dataframe(
-                                    pivot_df,
-                                    use_container_width=True,
-                                )
-                                
+
 
                         else:
                             st.error("엑셀 파일에 '연월구분' 컬럼이 없습니다.")
