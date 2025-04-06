@@ -80,6 +80,27 @@ st.markdown("""
         text-align: left;
         padding-left: 0;
     }
+    /* 기존 스타일 유지 */
+    
+    /* 사이드바 스타일 추가 */
+    [data-testid="stSidebar"] {
+        min-width: 200px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+        font-size: 0.8rem !important;
+    }
+    [data-testid="stSidebar"] .stRadio [role="radiogroup"] label {
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    [data-testid="stSidebar"] a {
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
