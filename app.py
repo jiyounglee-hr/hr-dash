@@ -224,14 +224,17 @@ st.markdown("""
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        width: 80% !important;
     }
     [data-testid="stSidebar"] a {
         font-size: 0.8rem !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
+    }
+    [data-testid="stSidebar"] button {
         width: 80% !important;
+        margin: 0 auto !important;
+        display: block !important;
     }
     </style>
 """, unsafe_allow_html=True)
