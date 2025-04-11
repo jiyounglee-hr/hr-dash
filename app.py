@@ -61,7 +61,11 @@ def calculate_experience(experience_text):
             months = (end.year - start.year) * 12 + (end.month - start.month) + 1
             total_months += months
             
-            period_str = f"{start_year}-{month_dict[start_month]}~{end_year}-{month_dict[end_month]} ({months//12}년 {months%12}개월)"
+            years = months // 12
+            remaining_months = months % 12
+            decimal_years = round(months / 12, 1)
+            
+            period_str = f"{start_year}-{month_dict[start_month]}~{end_year}-{month_dict[end_month]} ({years}년 {remaining_months}개월, {decimal_years}년)"
             if current_company:
                 period_str = f"{current_company}: {period_str}"
             experience_periods.append(period_str)
@@ -78,7 +82,11 @@ def calculate_experience(experience_text):
             months = (end.year - start.year) * 12 + (end.month - start.month) + 1
             total_months += months
             
-            period_str = f"{start_year}-{start_month.zfill(2)}~{end_year}-{end_month.zfill(2)} ({months//12}년 {months%12}개월)"
+            years = months // 12
+            remaining_months = months % 12
+            decimal_years = round(months / 12, 1)
+            
+            period_str = f"{start_year}-{start_month.zfill(2)}~{end_year}-{end_month.zfill(2)} ({years}년 {remaining_months}개월, {decimal_years}년)"
             if current_company:
                 period_str = f"{current_company}: {period_str}"
             experience_periods.append(period_str)
@@ -135,7 +143,11 @@ def calculate_experience(experience_text):
             months = (end.year - start.year) * 12 + (end.month - start.month) + 1
             total_months += months
             
-            period_str = f"{start.year}-{str(start.month).zfill(2)}~{end.year}-{str(end.month).zfill(2)} ({months//12}년 {months%12}개월)"
+            years = months // 12
+            remaining_months = months % 12
+            decimal_years = round(months / 12, 1)
+            
+            period_str = f"{start.year}-{str(start.month).zfill(2)}~{end.year}-{str(end.month).zfill(2)} ({years}년 {remaining_months}개월, {decimal_years}년)"
             if current_company:
                 period_str = f"{current_company}: {period_str}"
             experience_periods.append(period_str)
@@ -143,11 +155,12 @@ def calculate_experience(experience_text):
     # 총 경력기간 계산
     total_years = total_months // 12
     total_remaining_months = total_months % 12
+    total_decimal_years = round(total_months / 12, 1)
     
     # 결과 문자열 생성
     result = "\n".join(experience_periods)
     if result:
-        result += f"\n\n총 경력기간: {total_years}년 {total_remaining_months}개월"
+        result += f"\n\n총 경력기간: {total_years}년 {total_remaining_months}개월 ({total_decimal_years}년)"
     
     return result
 
@@ -1214,8 +1227,8 @@ try:
             job_roles = list(job_mapping.keys())
             # 경력입력 폼 생성
             with st.form("experience_form"):
-                experience_text = st.text_area("경력기간 입력 (예: 2020.06 ~ 재직 중)", 
-                                             help="각 경력은 줄바꿈으로 구분해주세요.\n예시:\n2020.06 ~ 재직 중\n2019.04 ~ 2020.06\n2017.06 ~ 2019.03")
+                experience_text = st.text_area("경력기간 입력 (이력서의 날짜 부분을 복사해서 붙여주세요.)", 
+                                             help="각 경력은 줄바꿈으로 구분해주세요.")
                 
                 # 경력기간 조회 버튼 추가
                 experience_submitted = st.form_submit_button("경력기간 조회")
