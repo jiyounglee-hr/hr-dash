@@ -109,15 +109,17 @@ def calculate_experience(experience_text):
         pattern7 = r'(\d{4})-(\d{1,2})-\d{1,2}\s*[~-–]'
         # 8. 2024/05/01 ~ 형식 (일 부분 무시)
         pattern8 = r'(\d{4})/(\d{1,2})/\d{1,2}\s*[~-–]'
+        # 9. 2023/05 - 2024.04 형식
+        pattern9 = r'(\d{4})[/\.](\d{1,2})\s*[-]\s*(\d{4})[/\.](\d{1,2})'
         
         match = None
-        for pattern in [pattern1, pattern2, pattern3, pattern4, pattern5, pattern6, pattern7, pattern8]:
+        for pattern in [pattern1, pattern2, pattern3, pattern4, pattern5, pattern6, pattern7, pattern8, pattern9]:
             match = re.search(pattern, line)
             if match:
                 break
                 
         if match:
-            if pattern in [pattern1, pattern2]:
+            if pattern in [pattern1, pattern2, pattern9]:
                 start_year, start_month, end_year, end_month = match.groups()
                 start_date = f"{start_year}-{start_month.zfill(2)}-01"
                 end_date = f"{end_year}-{end_month.zfill(2)}-01"
