@@ -61,7 +61,7 @@ def calculate_experience(experience_text):
             months = (end.year - start.year) * 12 + (end.month - start.month) + 1
             total_months += months
             
-            period_str = f"{start_month} {start_year} - {end_month} {end_year}: {months//12}년 {months%12}개월"
+            period_str = f"{start_year}-{month_dict[start_month]}~{end_year}-{month_dict[end_month]} ({months//12}년 {months%12}개월)"
             if current_company:
                 period_str = f"{current_company}: {period_str}"
             experience_periods.append(period_str)
@@ -78,7 +78,7 @@ def calculate_experience(experience_text):
             months = (end.year - start.year) * 12 + (end.month - start.month) + 1
             total_months += months
             
-            period_str = f"{start_year}년 {start_month}월 - {end_year}년 {end_month}월: {months//12}년 {months%12}개월"
+            period_str = f"{start_year}-{start_month.zfill(2)}~{end_year}-{end_month.zfill(2)} ({months//12}년 {months%12}개월)"
             if current_company:
                 period_str = f"{current_company}: {period_str}"
             experience_periods.append(period_str)
@@ -135,16 +135,21 @@ def calculate_experience(experience_text):
             months = (end.year - start.year) * 12 + (end.month - start.month) + 1
             total_months += months
             
-            # 경력기간 포맷팅 (2023-04~2024-07 형식으로 변경)
-            start_str = f"{start.year}-{start.month:02d}"
-            end_str = f"{end.year}-{end.month:02d}" if end != datetime.now() else '현재'
-            period_str = f"{start_str}~{end_str} ({months//12}년 {months%12}개월)"
+            period_str = f"{start.year}-{str(start.month).zfill(2)}~{end.year}-{str(end.month).zfill(2)} ({months//12}년 {months%12}개월)"
             if current_company:
                 period_str = f"{current_company}: {period_str}"
             experience_periods.append(period_str)
     
-    total_years = total_months / 12
-    return total_years, experience_periods
+    # 총 경력기간 계산
+    total_years = total_months // 12
+    total_remaining_months = total_months % 12
+    
+    # 결과 문자열 생성
+    result = "\n".join(experience_periods)
+    if result:
+        result += f"\n\n총 경력기간: {total_years}년 {total_remaining_months}개월"
+    
+    return result
 
 # 페이지 설정
 st.set_page_config(
