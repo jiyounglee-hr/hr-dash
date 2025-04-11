@@ -1223,10 +1223,11 @@ try:
                 if experience_submitted and experience_text:
                     try:
                         # 경력기간 계산
-                        total_years, experience_periods = calculate_experience(experience_text)
-                        st.write(f"총 경력기간: {total_years:.1f}년")
-                        for period in experience_periods:
-                            st.write(period)
+                        experience_result = calculate_experience(experience_text)
+                        if experience_result:
+                            st.markdown(f"**경력기간:**\n{experience_result}")
+                        else:
+                            st.markdown("**경력기간:** 경력 정보가 없습니다.")
                         # 인정경력(년) 필드의 디폴트 값 업데이트 (숫자값만)
                         st.session_state['years'] = float(f"{total_years:.1f}")
                         # 인정경력(년) 필드 업데이트
