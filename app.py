@@ -1225,14 +1225,23 @@ try:
                         # 경력기간 계산
                         experience_result = calculate_experience(experience_text)
                         if experience_result:
-                            st.markdown(f"**경력기간:**\n{experience_result}")
-                            # 총 경력기간 추출
-                            total_years_match = re.search(r'총 경력기간: (\d+)년 (\d+)개월', experience_result)
-                            if total_years_match:
-                                years, months = map(int, total_years_match.groups())
+                            # 경력기간과 총 경력기간 분리
+                            experience_lines = experience_result.split('\n')
+                            total_experience = experience_lines[-1]  # 마지막 줄이 총 경력기간
+                            experience_periods = experience_lines[:-2]  # 마지막 두 줄(총 경력기간과 빈 줄) 제외
+                            
+                            # 총 경력기간을 소수점으로 변환
+                            total_match = re.search(r'총 경력기간: (\d+)년 (\d+)개월', total_experience)
+                            if total_match:
+                                years, months = map(int, total_match.groups())
                                 total_years = years + months / 12
-                                # 인정경력(년) 필드의 디폴트 값 업데이트 (숫자값만)
-                                st.session_state['years'] = float(f"{total_years:.1f}")
+                                total_experience = f"총 경력기간: {total_years:.1f}년"
+                            
+                            # 경력기간 표시
+                            st.markdown(f"**{total_experience}**")
+                            st.markdown("**경력기간:**")
+                            for period in experience_periods:
+                                st.markdown(period)
                         else:
                             st.markdown("**경력기간:** 경력 정보가 없습니다.")
                             st.session_state['years'] = 0.0
