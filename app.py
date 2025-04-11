@@ -1226,10 +1226,16 @@ try:
                         experience_result = calculate_experience(experience_text)
                         if experience_result:
                             st.markdown(f"**경력기간:**\n{experience_result}")
+                            # 총 경력기간 추출
+                            total_years_match = re.search(r'총 경력기간: (\d+)년 (\d+)개월', experience_result)
+                            if total_years_match:
+                                years, months = map(int, total_years_match.groups())
+                                total_years = years + months / 12
+                                # 인정경력(년) 필드의 디폴트 값 업데이트 (숫자값만)
+                                st.session_state['years'] = float(f"{total_years:.1f}")
                         else:
                             st.markdown("**경력기간:** 경력 정보가 없습니다.")
-                        # 인정경력(년) 필드의 디폴트 값 업데이트 (숫자값만)
-                        st.session_state['years'] = float(f"{total_years:.1f}")
+                            st.session_state['years'] = 0.0
                         # 인정경력(년) 필드 업데이트
                         st.query_params["years"] = float(f"{total_years:.1f}")
                     except Exception as e:
