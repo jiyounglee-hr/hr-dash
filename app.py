@@ -1232,7 +1232,7 @@ try:
             # 경력입력 폼 생성
             with st.form("experience_form"):
                 experience_text = st.text_area("경력기간 입력 (이력서의 날짜 부분을 복사해서 붙여주세요.)", 
-                                             help="각 경력은 줄바꿈으로 구분해주세요.")
+                                             help="# 날짜 패턴 : 2023. 04, 2015.01., 2024.05,  2024-05, 2024/05, 2024.05.01, 2024-05-01,2024/05/01, 2023/05")
                 
                 # 경력기간 조회 버튼 추가
                 experience_submitted = st.form_submit_button("경력기간 조회")
