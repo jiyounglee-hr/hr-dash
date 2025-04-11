@@ -107,9 +107,11 @@ def calculate_experience(experience_text):
         pattern6 = r'(\d{4})\.(\d{1,2})\.\d{1,2}\s*[~-–]'
         # 7. 2024-05-01 ~ 형식 (일 부분 무시)
         pattern7 = r'(\d{4})-(\d{1,2})-\d{1,2}\s*[~-–]'
+        # 8. 2024/05/01 ~ 형식 (일 부분 무시)
+        pattern8 = r'(\d{4})/(\d{1,2})/\d{1,2}\s*[~-–]'
         
         match = None
-        for pattern in [pattern1, pattern2, pattern3, pattern4, pattern5, pattern6, pattern7]:
+        for pattern in [pattern1, pattern2, pattern3, pattern4, pattern5, pattern6, pattern7, pattern8]:
             match = re.search(pattern, line)
             if match:
                 break
@@ -131,7 +133,7 @@ def calculate_experience(experience_text):
                     end = datetime.now()
                 else:
                     # 종료일 패턴 처리 (일 부분 무시)
-                    end_pattern = r'[~-–]\s*(\d{4})[\.-](\d{1,2})(?:[\.-]\d{1,2})?'
+                    end_pattern = r'[~-–]\s*(\d{4})[\.-/](\d{1,2})(?:[\.-/]\d{1,2})?'
                     end_match = re.search(end_pattern, line)
                     if end_match:
                         end_year, end_month = end_match.groups()
