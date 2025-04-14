@@ -2,57 +2,24 @@ name: Daily Auto Push
 
 on:
   schedule:
-    # 매일 오전 8시에 실행 (UTC+9 기준)
-    - cron: '0 23 * * *'  # UTC 기준 23시 = 한국 시간 오전 8시
-  workflow_dispatch:  # 수동 실행 옵션 추가
+    - cron: '0 0 * * *'  # 매일 자정에 실행
+  workflow_dispatch:  # 수동 실행 가능
 
 jobs:
-  auto-push:
+  push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
         lfs: true
-
-    - name: Set up Git LFS
-      run: |
-        git lfs install
-        git lfs pull
-        git lfs track "*.xlsx"
-        git add .gitattributes
         
     - name: Set up Git
       run: |
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
-        git config --global lfs.locksverify false
         git config --global core.quotepath false
-        git config --global core.autocrlf false
-
-    - name: Download Excel Files
-      run: |
-        echo "엑셀 파일 다운로드 중..."
-        # 임직원 기초 데이터.xlsx 다운로드
-        curl -L -o "임직원 기초 데이터.xlsx" "https://raw.githubusercontent.com/jiyounglee-hr/hr-dash/master/임직원%20기초%20데이터.xlsx"
-        # salary_table.xlsx 다운로드
-        curl -L -o "salary_table.xlsx" "https://raw.githubusercontent.com/jiyounglee-hr/hr-dash/master/salary_table.xlsx"
-
-    - name: Debug Info
-      run: |
-        echo "현재 디렉토리 내용:"
-        ls -la
-        echo "Git 상태:"
-        git status
-        echo "Git LFS 상태:"
-        git lfs status
-        echo "엑셀 파일 크기:"
-        ls -lh *.xlsx
         
     - name: Set up Git LFS
       run: |
@@ -60,19 +27,15 @@ jobs:
         git lfs track "*.xlsx"
         git add .gitattributes
         
-    - name: Check for changes
+    - name: Check and commit changes
       run: |
-        git add 임직원\ 기초\ 데이터.xlsx
-        git add salary_table.xlsx
-        git status
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-          exit 0
-        fi
+        git add "임직원 기초 데이터.xlsx"
+        git add "salary_table.xlsx"
         
-    - name: Commit and push
-      run: |
-        git commit -m "Update: 엑셀 파일 자동 업데이트"
-        git push origin master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if git diff --staged --quiet; then
+          echo "No changes detected"
+          exit 0
+        else
+          git commit -m "Update: 엑셀 파일 자동 업데이트"
+          git push origin master
+        fi
