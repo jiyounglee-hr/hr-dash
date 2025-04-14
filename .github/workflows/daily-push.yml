@@ -24,12 +24,16 @@ jobs:
       run: |
         git lfs install
         git lfs pull
+        git lfs track "*.xlsx"
+        git add .gitattributes
         
     - name: Set up Git
       run: |
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         git config --global lfs.locksverify false
+        git config --global core.quotepath false
+        git config --global core.autocrlf false
 
     - name: Debug Info
       run: |
@@ -39,19 +43,37 @@ jobs:
         git status
         echo "Git LFS 상태:"
         git lfs status
+        echo "엑셀 파일 크기:"
+        ls -lh *.xlsx
         
-    - name: Check for changes and push
+    - name: Remove and Update Excel Files
       run: |
-        # 모든 xlsx 파일 강제 추가
-        echo "모든 xlsx 파일 추가 중..."
-        git add -f *.xlsx
+        # 기존 엑셀 파일 삭제
+        echo "기존 엑셀 파일 삭제 중..."
+        git rm -f "임직원 기초 데이터.xlsx" || true
+        git rm -f "salary_table.xlsx" || true
+        
+        # 변경사항 커밋
+        if git status --porcelain | grep -q '^[D]'; then
+          git commit -m "Remove: 기존 엑셀 파일 삭제"
+          git push origin master
+        fi
+        
+        # 새로운 엑셀 파일 추가
+        echo "새로운 엑셀 파일 추가 중..."
+        git add -f "임직원 기초 데이터.xlsx"
+        git add -f "salary_table.xlsx"
         
         # app.py 파일 추가
         if [ -f "app.py" ]; then
           git add app.py
         fi
         
-        # 변경사항 확인 및 커밋
+        # 변경사항 확인
+        echo "현재 Git 상태:"
+        git status
+        
+        # 변경사항이 있는지 확인
         if git status --porcelain | grep -q '^[MAD]'; then
           echo "변경사항이 감지되었습니다."
           current_date=$(date '+%Y-%m-%d %H:%M:%S')
