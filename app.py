@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.sharepoint.client_context import ClientContext
@@ -12,6 +12,46 @@ import requests
 from PIL import Image
 from io import BytesIO
 import re
+import plotly.io as pio
+import numpy as np
+from dateutil.relativedelta import relativedelta
+
+# 날짜 정규화 함수
+def normalize_date(date_str):
+    if pd.isna(date_str) or date_str == '':
+        return None
+    
+    # 이미 datetime 객체인 경우
+    if isinstance(date_str, (datetime, pd.Timestamp)):
+        return date_str
+    
+    # 문자열인 경우
+    if isinstance(date_str, str):
+        # 공백 제거
+        date_str = date_str.strip()
+        
+        # 빈 문자열 처리
+        if not date_str:
+            return None
+            
+        # 날짜 형식 변환 시도
+        try:
+            # YYYY-MM-DD 형식
+            if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+                return datetime.strptime(date_str, '%Y-%m-%d')
+            # YYYY.MM.DD 형식
+            elif re.match(r'^\d{4}\.\d{2}\.\d{2}$', date_str):
+                return datetime.strptime(date_str, '%Y.%m.%d')
+            # YYYY/MM/DD 형식
+            elif re.match(r'^\d{4}/\d{2}/\d{2}$', date_str):
+                return datetime.strptime(date_str, '%Y/%m/%d')
+            # YYYYMMDD 형식
+            elif re.match(r'^\d{8}$', date_str):
+                return datetime.strptime(date_str, '%Y%m%d')
+        except ValueError:
+            return None
+    
+    return None
 
 def calculate_experience(experience_text):
     """경력기간을 계산하는 함수"""
@@ -412,6 +452,8 @@ if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
     st.session_state.menu = "📈 연도별 인원 통계"
 if st.sidebar.button("🔍 임직원 검색", use_container_width=True):
     st.session_state.menu = "🔍 임직원 검색"
+if st.sidebar.button("😊 임직원 명부", use_container_width=True):
+    st.session_state.menu = "😊 임직원 명부"
 
 st.sidebar.markdown("---")
 
@@ -423,6 +465,8 @@ if st.sidebar.button("📋 채용_처우협상", use_container_width=True):
     st.session_state.menu = "📋 채용_처우협상"
 if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
     st.session_state.menu = "⏰ 초과근무 조회"
+if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
+    st.session_state.menu = "📅 인사발령 내역"
 
 # 채용서포트 링크 추가
 st.sidebar.markdown("---")
@@ -1641,6 +1685,328 @@ try:
                     st.error(f"파일을 읽는 중 오류가 발생했습니다: {str(e)}")
             else:
                 st.info("초과근무 엑셀 파일을 업로드하세요.")
+
+        elif menu == "😊 임직원 명부":
+            st.markdown("##### 😊 임직원 명부")
+            # 조회 조건
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                query_date = st.date_input("조회일자", datetime.now())
+            
+            with col2:
+                name = st.text_input("성명")
+            
+            with col3:
+                employment_type = st.selectbox(
+                    "고용구분",
+                    ["전체", "정규직", "계약직"]
+                )
+            
+            with col4:
+                employment_status = st.selectbox(
+                    "재직상태",
+                    ["전체", "재직", "퇴직"]
+                )
+            
+            with col5:
+                show_department_history = st.checkbox("해당 시점부서 추가")
+            
+            # 데이터 로드
+            @st.cache_data
+            def load_employee_data():
+                try:
+                    # 파일 경로를 절대 경로로 변경
+                    import os
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    
+                    # 파일이 존재하는지 확인
+                    if not os.path.exists(file_path):
+                        st.error(f"파일을 찾을 수 없습니다: {file_path}")
+                        return None, None
+                    
+                    # 파일 읽기
+                    df = pd.read_excel(file_path, sheet_name=0)  # 첫 번째 시트 사용
+                    df_history = pd.read_excel(file_path, sheet_name=1)  # 두 번째 시트 사용
+                    
+                    # 컬럼 이름 재정의
+                    df.columns = df.columns.str.strip()  # 컬럼 이름의 공백 제거
+                    df_history.columns = df_history.columns.str.strip()  # 컬럼 이름의 공백 제거
+                    
+                    # 날짜 컬럼 형식 통일
+                    date_columns = ['입사일', '퇴사일', '발령일']
+                    for col in date_columns:
+                        if col in df.columns:
+                            df[col] = pd.to_datetime(df[col], errors='coerce')
+                        if col in df_history.columns:
+                            df_history[col] = pd.to_datetime(df_history[col], errors='coerce')
+                    
+                    # None 값 처리
+                    df = df.fillna('')
+                    df_history = df_history.fillna('')
+                    
+                    return df, df_history
+                except Exception as e:
+                    st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
+                    return None, None
+            
+            df, df_history = load_employee_data()
+            
+            # 조회일자 기준으로 재직중인 직원 필터링
+            df = df[
+                (df['입사일'] <= pd.Timestamp(query_date)) &  # 입사일이 조회일자 이전
+                (
+                    (df['퇴사일'].isna()) |  # 퇴사일이 없는 경우
+                    (df['퇴사일'] >= pd.Timestamp(query_date))  # 퇴사일이 조회일자 이후
+                )
+            ]
+            
+            # 조회일자 기준으로 인사발령 데이터 필터링
+            df_history_filtered = df_history[df_history['발령일'] <= pd.Timestamp(query_date)]
+            
+            # 각 직원별 가장 최근 발령 데이터만 선택
+            df_history_filtered = df_history_filtered.sort_values('발령일').groupby('성명').last().reset_index()
+            
+            # 기본 컬럼 설정
+            se_columns = [
+                "사번", "성명", "본부", "팀", "직무", "직위", "직책", "입사일", 
+                "재직기간", "정규직전환일", "고용구분", "재직상태", "생년월일", 
+                "남/여", "만나이", "퇴사일", "학력", "최종학교", "전공", 
+                "경력사항", "휴직상태"
+            ]
+            
+            history_columns = [
+                "발령일", "구분", "성명", "변경후_본부",  "변경후_팀", "변경후_직책"
+            ]
+            
+            # 재직기간 계산 함수
+            def calculate_employment_period(row):
+                if pd.isna(row['입사일']):
+                    return None
+                
+                start_date = pd.to_datetime(row['입사일'])
+                
+                # 재직상태가 '퇴직'인 경우 퇴사일을 기준으로 계산
+                if row['재직상태'] == '퇴직' and pd.notna(row['퇴사일']):
+                    end_date = pd.to_datetime(row['퇴사일'])
+                else:
+                    # 그 외의 경우 조회일자를 기준으로 계산
+                    end_date = pd.Timestamp(query_date)
+                
+                years = (end_date - start_date).days // 365
+                months = ((end_date - start_date).days % 365) // 30
+                
+                return f"{years}년 {months}개월"
+            
+            # 데이터 필터링
+            if name:
+                df = df[df['성명'].str.contains(name, na=False)]
+            
+            if employment_type != "전체":
+                df = df[df['고용구분'] == employment_type]
+            
+            if employment_status != "전체":
+                df = df[df['재직상태'] == employment_status]
+            
+            # 재직기간 계산
+            df['재직기간'] = df.apply(calculate_employment_period, axis=1)
+            
+            # 부서 이력 데이터 처리
+            if show_department_history:
+                # 인사발령 데이터와 조인
+                df_merged = pd.merge(
+                    df, 
+                    df_history_filtered, 
+                    left_on='성명', 
+                    right_on='성명', 
+                    how='left',
+                    suffixes=('', '_history')  # 중복 컬럼에 접미사 추가
+                )
+                
+                # 발령이 없는 경우 기본값 설정
+                df_merged['변경후_본부'] = df_merged['변경후_본부'].fillna(df_merged['본부'])
+                df_merged['변경후_팀'] = df_merged['변경후_팀'].fillna(df_merged['팀'])
+                df_merged['변경후_직책'] = df_merged['변경후_직책'].fillna(df_merged['직책'])
+                
+                # 컬럼 순서 조정
+                display_columns = se_columns + [col for col in history_columns if col not in se_columns]
+                df_display = df_merged[display_columns]
+            else:
+                df_display = df[se_columns]
+            
+            # 데이터 표시
+            df_display = df_display.reset_index(drop=True)
+            df_display.index = df_display.index + 1
+            df_display = df_display.reset_index()
+            df_display = df_display.rename(columns={'index': 'No'})
+            
+            # 날짜 컬럼의 시간 제거
+            date_columns = ['정규직전환일', '입사일', '퇴사일', '생년월일', '발령일']
+            for col in date_columns:
+                if col in df_display.columns:
+                    df_display[col] = pd.to_datetime(df_display[col]).dt.date
+            
+            # 데이터 수에 따라 높이 동적 조정 (행당 35픽셀)
+            row_height = 35  # 각 행의 예상 높이
+            dynamic_height = min(len(df_display) * row_height + 40, 600)  # 헤더 높이 추가, 최대 600픽셀로 제한
+            
+            st.dataframe(
+                df_display,
+                use_container_width=True,
+                hide_index=True,
+                height=dynamic_height,
+                column_config={
+                   "직무": st.column_config.Column(width=70),
+                   "최종학교": st.column_config.Column(width=70),
+                   "전공": st.column_config.Column(width=70),
+                   "경력사항": st.column_config.Column(width=70)
+                }
+            )
+            
+            # 엑셀 다운로드 버튼
+            @st.cache_data
+            def convert_df_to_excel(df):
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='임직원명부')
+                processed_data = output.getvalue()
+                return processed_data
+            
+            excel_data = convert_df_to_excel(df_display)
+            st.download_button(
+                label="📥 엑셀 다운로드",
+                data=excel_data,
+                file_name=f"임직원명부_{query_date.strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        elif menu == "📅 인사발령 내역":
+            st.markdown("##### 📅 인사발령 내역")
+            
+            # 데이터 로드
+            @st.cache_data
+            def load_promotion_data():
+                try:
+                    # 파일 경로를 절대 경로로 변경
+                    import os
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    
+                    # 파일이 존재하는지 확인
+                    if not os.path.exists(file_path):
+                        st.error(f"파일을 찾을 수 없습니다: {file_path}")
+                        return None
+                    
+                    # 파일 읽기 (sheet2)
+                    df_promotion = pd.read_excel(file_path, sheet_name=1)
+                    
+                    # 컬럼 이름 재정의
+                    df_promotion.columns = df_promotion.columns.str.strip()
+                    
+                    # 날짜 컬럼 형식 통일
+                    df_promotion['발령일'] = pd.to_datetime(df_promotion['발령일'], errors='coerce')
+                    
+                    # None 값 처리
+                    df_promotion = df_promotion.fillna('')
+                    
+                    # 발령일이 유효한 날짜인 행만 필터링
+                    df_promotion = df_promotion[pd.notna(df_promotion['발령일'])]
+                    
+                    # 발령년도 추출 (NA 값 처리)
+                    df_promotion['발령년도'] = df_promotion['발령일'].dt.year
+                    df_promotion['발령년도'] = df_promotion['발령년도'].fillna(0).astype(int)
+                    
+                    return df_promotion
+                except Exception as e:
+                    st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
+                    return None
+            
+            df_promotion = load_promotion_data()
+            
+            if df_promotion is not None:
+                # 조회 조건
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    current_year = datetime.now().year
+                    years = sorted(df_promotion['발령일'].dt.year.unique(), reverse=True)
+                    selected_year = st.selectbox("발령 연도", ["전체"] + years, index=0)
+                
+                with col2:
+                    name = st.text_input("성명")
+                
+                with col3:
+                    promotion_types = sorted(df_promotion['구분'].unique())
+                    selected_types = st.multiselect("발령구분", promotion_types)
+                
+                # 데이터 필터링
+                filtered_df = df_promotion.copy()
+                
+                if selected_year != "전체":
+                    filtered_df = filtered_df[filtered_df['발령일'].dt.year == selected_year]
+                
+                if name:
+                    filtered_df = filtered_df[filtered_df['성명'].str.contains(name, na=False)]
+                
+                if selected_types:
+                    filtered_df = filtered_df[filtered_df['구분'].isin(selected_types)]
+                
+                # 표시할 컬럼 설정
+                display_columns = [
+                    "발령일", "구분", "성명", 
+                    "변경전_본부", "변경전_실", "변경전_팀", "변경전_직책",
+                    "변경후_본부", "변경후_실", "변경후_팀", "변경후_직책", "비고"
+                ]
+                
+                # 데이터 표시
+                df_display = filtered_df[display_columns].copy()
+                df_display = df_display.sort_values('발령일', ascending=False)
+                df_display = df_display.reset_index(drop=True)
+                df_display.index = df_display.index + 1
+                df_display = df_display.reset_index()
+                df_display = df_display.rename(columns={'index': 'No'})
+                
+                # 날짜 컬럼의 시간 제거
+                df_display['발령일'] = pd.to_datetime(df_display['발령일']).dt.date
+                
+                # 데이터프레임 표시
+                if not filtered_df.empty:
+                    # 데이터 정렬 및 인덱스 설정
+                    display_df = filtered_df[display_columns].sort_values('발령일', ascending=False).reset_index(drop=True)
+                    display_df.index = display_df.index + 1  # 인덱스를 1부터 시작하도록 설정
+                    
+                    # 발령일 컬럼의 시간 제거
+                    display_df['발령일'] = pd.to_datetime(display_df['발령일']).dt.strftime('%Y-%m-%d')
+                    
+                    # 데이터 수에 따라 높이 동적 조정 (행당 35픽셀)
+                    row_height = 35  # 각 행의 예상 높이
+                    dynamic_height = min(len(display_df) * row_height + 40, 600)  # 헤더 높이 추가, 최대 600픽셀로 제한
+                    
+                    st.dataframe(
+                        display_df,
+                        use_container_width=True,
+                        height=dynamic_height
+                    )
+                else:
+                    st.warning("조회된 데이터가 없습니다.")
+                
+                # 엑셀 다운로드 버튼
+                @st.cache_data
+                def convert_df_to_excel(df):
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        df.to_excel(writer, index=False, sheet_name='인사발령내역')
+                    processed_data = output.getvalue()
+                    return processed_data
+                
+                excel_data = convert_df_to_excel(df_display)
+                st.download_button(
+                    label="📥 엑셀 다운로드",
+                    data=excel_data,
+                    file_name=f"인사발령내역_{selected_year}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}") 
