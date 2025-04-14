@@ -299,22 +299,27 @@ if not check_password():
     st.stop()  # Do not continue if check_password() returned False.
 
 # 데이터 로드 함수
-@st.cache_data
+@st.cache_data(ttl=60)  # 60초마다 캐시 갱신
 def load_data():
     try:
-        # 현재 스크립트의 디렉토리 경로 가져오기
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # 자동으로 엑셀 파일 찾기
-        excel_files = [f for f in os.listdir(current_dir) if f.endswith(('.xlsx', '.xls'))]
-        if excel_files:
-            # 가장 최근 수정된 엑셀 파일 선택
-            latest_file = max(excel_files, key=lambda x: os.path.getmtime(os.path.join(current_dir, x)))
-            file_path = os.path.join(current_dir, latest_file)
-            df = pd.read_excel(file_path)
-            return df
-        else:
-            st.warning("Excel 파일을 찾을 수 없습니다.")
+        # 엑셀 파일 경로
+        file_path = "임직원 기초 데이터.xlsx"
+        
+        # 파일이 존재하는지 확인
+        if not os.path.exists(file_path):
+            st.error(f"파일을 찾을 수 없습니다: {file_path}")
             return None
+            
+        # 파일 수정 시간 확인
+        last_modified = os.path.getmtime(file_path)
+        
+        # 엑셀 파일 읽기
+        df = pd.read_excel(file_path)
+        
+        # 데이터 로드 시간 표시
+        st.sidebar.markdown(f"*마지막 데이터 업데이트: {datetime.fromtimestamp(last_modified).strftime('%Y-%m-%d %H:%M:%S')}*")
+        
+        return df
     except Exception as e:
         st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
         return None
