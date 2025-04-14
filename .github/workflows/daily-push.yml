@@ -35,6 +35,14 @@ jobs:
         git config --global core.quotepath false
         git config --global core.autocrlf false
 
+    - name: Download Excel Files
+      run: |
+        echo "엑셀 파일 다운로드 중..."
+        # 임직원 기초 데이터.xlsx 다운로드
+        curl -L -o "임직원 기초 데이터.xlsx" "https://raw.githubusercontent.com/jiyounglee-hr/hr-dash/master/임직원%20기초%20데이터.xlsx"
+        # salary_table.xlsx 다운로드
+        curl -L -o "salary_table.xlsx" "https://raw.githubusercontent.com/jiyounglee-hr/hr-dash/master/salary_table.xlsx"
+
     - name: Debug Info
       run: |
         echo "현재 디렉토리 내용:"
@@ -46,31 +54,25 @@ jobs:
         echo "엑셀 파일 크기:"
         ls -lh *.xlsx
         
-    - name: Update Excel Files
+    - name: Set up Git LFS
       run: |
-        # 엑셀 파일 업데이트
-        echo "엑셀 파일 업데이트 중..."
-        git add -f "임직원 기초 데이터.xlsx"
-        git add -f "salary_table.xlsx"
+        git lfs install
+        git lfs track "*.xlsx"
+        git add .gitattributes
         
-        # app.py 파일 추가
-        if [ -f "app.py" ]; then
-          git add app.py
-        fi
-        
-        # 변경사항 확인
-        echo "현재 Git 상태:"
+    - name: Check for changes
+      run: |
+        git add 임직원\ 기초\ 데이터.xlsx
+        git add salary_table.xlsx
         git status
-        
-        # 변경사항이 있는지 확인
-        if git status --porcelain | grep -q '^[MAD]'; then
-          echo "변경사항이 감지되었습니다."
-          current_date=$(date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "Update: 파일 자동 업데이트 (${current_date})"
-          git push origin master
-          echo "변경사항이 성공적으로 푸시되었습니다."
-        else
-          echo "푸시할 변경사항이 없습니다."
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          exit 0
         fi
+        
+    - name: Commit and push
+      run: |
+        git commit -m "Update: 엑셀 파일 자동 업데이트"
+        git push origin master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
