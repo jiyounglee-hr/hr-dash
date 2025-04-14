@@ -42,18 +42,9 @@ jobs:
         
     - name: Check for changes and push
       run: |
-        # Git LFS 트래킹 설정
-        git lfs track "*.xlsx"
-        git add .gitattributes
-        
-        # 엑셀 파일 변경사항 확인 및 추가
-        if [ -f "임직원 기초 데이터.xlsx" ]; then
-          echo "엑셀 파일 찾음, 변경사항 확인 중..."
-          git add -f "임직원 기초 데이터.xlsx"
-          git lfs status
-        else
-          echo "엑셀 파일을 찾을 수 없습니다."
-        fi
+        # 모든 xlsx 파일 강제 추가
+        echo "모든 xlsx 파일 추가 중..."
+        git add -f *.xlsx
         
         # app.py 파일 추가
         if [ -f "app.py" ]; then
@@ -64,7 +55,7 @@ jobs:
         if git status --porcelain | grep -q '^[MAD]'; then
           echo "변경사항이 감지되었습니다."
           current_date=$(date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "Update: 임직원 기초 데이터 업데이트 (${current_date})"
+          git commit -m "Update: 파일 자동 업데이트 (${current_date})"
           git push origin master
           echo "변경사항이 성공적으로 푸시되었습니다."
         else
