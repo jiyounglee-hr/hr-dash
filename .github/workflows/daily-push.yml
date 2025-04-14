@@ -46,21 +46,10 @@ jobs:
         echo "엑셀 파일 크기:"
         ls -lh *.xlsx
         
-    - name: Remove and Update Excel Files
+    - name: Update Excel Files
       run: |
-        # 기존 엑셀 파일 삭제
-        echo "기존 엑셀 파일 삭제 중..."
-        git rm -f "임직원 기초 데이터.xlsx" || true
-        git rm -f "salary_table.xlsx" || true
-        
-        # 변경사항 커밋
-        if git status --porcelain | grep -q '^[D]'; then
-          git commit -m "Remove: 기존 엑셀 파일 삭제"
-          git push origin master
-        fi
-        
-        # 새로운 엑셀 파일 추가
-        echo "새로운 엑셀 파일 추가 중..."
+        # 엑셀 파일 업데이트
+        echo "엑셀 파일 업데이트 중..."
         git add -f "임직원 기초 데이터.xlsx"
         git add -f "salary_table.xlsx"
         
