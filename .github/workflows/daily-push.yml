@@ -27,20 +27,38 @@ jobs:
         git lfs track "*.xlsx"
         git add .gitattributes
         
+    - name: Debug Info
+      run: |
+        echo "현재 디렉토리 내용:"
+        ls -la
+        echo "Git 상태:"
+        git status
+        echo "Git LFS 상태:"
+        git lfs status
+        
     - name: Check and commit changes
       run: |
-        # 파일 이름에 공백이 있는 경우를 위해 따옴표로 감싸서 처리
-        FILES=("임직원 기초 데이터.xlsx" "salary_table.xlsx")
-        for file in "${FILES[@]}"; do
-          if [ -f "$file" ]; then
-            git add "$file"
-          fi
-        done
+        # 파일 존재 여부 확인
+        if [ -f "임직원 기초 데이터.xlsx" ]; then
+          echo "임직원 기초 데이터.xlsx 파일이 존재합니다."
+          git add "임직원 기초 데이터.xlsx"
+        else
+          echo "임직원 기초 데이터.xlsx 파일이 존재하지 않습니다."
+        fi
         
+        if [ -f "salary_table.xlsx" ]; then
+          echo "salary_table.xlsx 파일이 존재합니다."
+          git add "salary_table.xlsx"
+        else
+          echo "salary_table.xlsx 파일이 존재하지 않습니다."
+        fi
+        
+        # 변경사항 확인
         if git diff --staged --quiet; then
-          echo "No changes detected"
+          echo "변경사항이 없습니다."
           exit 0
         else
+          echo "변경사항이 있습니다."
           git commit -m "Update: 엑셀 파일 자동 업데이트"
           git push origin master
         fi
