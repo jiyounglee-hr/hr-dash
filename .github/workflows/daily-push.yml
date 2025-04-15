@@ -24,6 +24,7 @@ jobs:
         git config --global user.email "actions@github.com"
         git config --global core.quotepath false
         git lfs install
+        git lfs pull
         
     - name: Debug Info
       run: |
@@ -35,31 +36,41 @@ jobs:
         git status
         echo "파일 존재 여부:"
         ls -la Emp_Data.xlsx || echo "파일이 존재하지 않습니다"
+        echo "파일 크기:"
+        ls -l Emp_Data.xlsx || echo "파일이 존재하지 않습니다"
         
     - name: Check and commit changes
       run: |
-        # Git LFS 캐시 초기화
-        git lfs prune
-        git lfs fetch --all
-        git lfs checkout
+        # Git LFS 설정 초기화
+        git lfs uninstall
+        git lfs install
+        git lfs pull
         
         # 파일이 존재하는지 확인
         if [ -f "Emp_Data.xlsx" ]; then
           echo "Emp_Data.xlsx 파일이 존재합니다."
-          # 파일 상태 강제 갱신
-          git rm --cached Emp_Data.xlsx
-          git lfs track Emp_Data.xlsx
+          
+          # Git LFS 설정
+          git lfs track "*.xlsx"
           git add .gitattributes
+          
+          # 파일 상태 초기화
+          git rm --cached -r .
+          git reset --hard
+          
+          # 파일 추가
           git add Emp_Data.xlsx
           
-          # 변경사항 확인
-          if git diff --staged --quiet; then
-            echo "변경사항이 없습니다."
-            exit 0
-          else
+          # 변경사항 확인 (더 자세한 비교)
+          if [ -n "$(git status --porcelain)" ]; then
             echo "변경사항이 있습니다."
+            git status
             git commit -m "Update: 엑셀 파일 자동 업데이트"
             git push origin master
+          else
+            echo "변경사항이 없습니다."
+            git status
+            exit 0
           fi
         else
           echo "Emp_Data.xlsx 파일이 존재하지 않습니다."
