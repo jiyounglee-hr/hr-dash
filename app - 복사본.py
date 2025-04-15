@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.sharepoint.client_context import ClientContext
@@ -11,202 +11,6 @@ import io
 import requests
 from PIL import Image
 from io import BytesIO
-import re
-import plotly.io as pio
-import numpy as np
-from dateutil.relativedelta import relativedelta
-
-# 날짜 정규화 함수
-def normalize_date(date_str):
-    if pd.isna(date_str) or date_str == '':
-        return None
-    
-    # 이미 datetime 객체인 경우
-    if isinstance(date_str, (datetime, pd.Timestamp)):
-        return date_str
-    
-    # 문자열인 경우
-    if isinstance(date_str, str):
-        # 공백 제거
-        date_str = date_str.strip()
-        
-        # 빈 문자열 처리
-        if not date_str:
-            return None
-            
-        # 날짜 형식 변환 시도
-        try:
-            # YYYY-MM-DD 형식
-            if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
-                return datetime.strptime(date_str, '%Y-%m-%d')
-            # YYYY.MM.DD 형식
-            elif re.match(r'^\d{4}\.\d{2}\.\d{2}$', date_str):
-                return datetime.strptime(date_str, '%Y.%m.%d')
-            # YYYY/MM/DD 형식
-            elif re.match(r'^\d{4}/\d{2}/\d{2}$', date_str):
-                return datetime.strptime(date_str, '%Y/%m/%d')
-            # YYYYMMDD 형식
-            elif re.match(r'^\d{8}$', date_str):
-                return datetime.strptime(date_str, '%Y%m%d')
-        except ValueError:
-            return None
-    
-    return None
-
-def calculate_experience(experience_text):
-    """경력기간을 계산하는 함수"""
-    from datetime import datetime
-    import pandas as pd
-    import re
-    
-    # 영문 월을 숫자로 변환하는 딕셔너리
-    month_dict = {
-        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
-        'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-    }
-    
-    total_months = 0
-    experience_periods = []
-    
-    # 각 줄을 분리하여 처리
-    lines = experience_text.split('\n')
-    current_company = None
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        # 회사명 추출 (숫자나 특수문자가 없는 줄)
-        if not any(c.isdigit() for c in line) and not any(c in '~-–./' for c in line):
-            current_company = line
-            continue
-            
-        # 영문 월 형식 패턴 (예: Nov 2021 – Oct 2024)
-        en_pattern = r'([A-Za-z]{3})\s*(\d{4})\s*[–-]\s*([A-Za-z]{3})\s*(\d{4})'
-        en_match = re.search(en_pattern, line)
-        
-        # 한국어 날짜 형식 패턴 (예: 2021 년 11월 – 2024 년 10월)
-        kr_pattern = r'(\d{4})\s*년?\s*(\d{1,2})\s*월\s*[-–~]\s*(\d{4})\s*년?\s*(\d{1,2})\s*월'
-        kr_match = re.search(kr_pattern, line)
-        
-        if en_match:
-            start_month, start_year, end_month, end_year = en_match.groups()
-            start_date = f"{start_year}-{month_dict[start_month]}-01"
-            end_date = f"{end_year}-{month_dict[end_month]}-01"
-            
-            start = datetime.strptime(start_date, "%Y-%m-%d")
-            end = datetime.strptime(end_date, "%Y-%m-%d")
-            
-            months = (end.year - start.year) * 12 + (end.month - start.month) + 1
-            total_months += months
-            
-            years = months // 12
-            remaining_months = months % 12
-            decimal_years = round(months / 12, 1)
-            
-            period_str = f"{start_year}-{month_dict[start_month]}~{end_year}-{month_dict[end_month]} ({years}년 {remaining_months}개월, {decimal_years}년)"
-            if current_company:
-                period_str = f"{current_company}: {period_str}"
-            experience_periods.append(period_str)
-            continue
-            
-        elif kr_match:
-            start_year, start_month, end_year, end_month = kr_match.groups()
-            start_date = f"{start_year}-{start_month.zfill(2)}-01"
-            end_date = f"{end_year}-{end_month.zfill(2)}-01"
-            
-            start = datetime.strptime(start_date, "%Y-%m-%d")
-            end = datetime.strptime(end_date, "%Y-%m-%d")
-            
-            months = (end.year - start.year) * 12 + (end.month - start.month) + 1
-            total_months += months
-            
-            years = months // 12
-            remaining_months = months % 12
-            decimal_years = round(months / 12, 1)
-            
-            period_str = f"{start_year}-{start_month.zfill(2)}~{end_year}-{end_month.zfill(2)} ({years}년 {remaining_months}개월, {decimal_years}년)"
-            if current_company:
-                period_str = f"{current_company}: {period_str}"
-            experience_periods.append(period_str)
-            continue
-            
-        # 날짜 패턴 처리
-        # 1. 2023. 04 ~ 2024. 07 형식
-        pattern1 = r'(\d{4})\.\s*(\d{1,2})\s*[~-–]\s*(\d{4})\.\s*(\d{1,2})'
-        # 2. 2015.01.~2016.06 형식
-        pattern2 = r'(\d{4})\.(\d{1,2})\.\s*[~-–]\s*(\d{4})\.(\d{1,2})'
-        # 3. 2024.05 ~ 형식
-        pattern3 = r'(\d{4})\.(\d{1,2})\s*[~-–]'
-        # 4. 2024-05 ~ 형식
-        pattern4 = r'(\d{4})-(\d{1,2})\s*[~-–]'
-        # 5. 2024/05 ~ 형식
-        pattern5 = r'(\d{4})/(\d{1,2})\s*[~-–]'
-        # 6. 2024.05.01 ~ 형식 (일 부분 무시)
-        pattern6 = r'(\d{4})\.(\d{1,2})\.\d{1,2}\s*[~-–]'
-        # 7. 2024-05-01 ~ 형식 (일 부분 무시)
-        pattern7 = r'(\d{4})-(\d{1,2})-\d{1,2}\s*[~-–]'
-        # 8. 2024/05/01 ~ 형식 (일 부분 무시)
-        pattern8 = r'(\d{4})/(\d{1,2})/\d{1,2}\s*[~-–]'
-        # 9. 2023/05 - 2024.04 형식
-        pattern9 = r'(\d{4})[/\.](\d{1,2})\s*[-]\s*(\d{4})[/\.](\d{1,2})'
-        
-        match = None
-        for pattern in [pattern1, pattern2, pattern3, pattern4, pattern5, pattern6, pattern7, pattern8, pattern9]:
-            match = re.search(pattern, line)
-            if match:
-                break
-                
-        if match:
-            if pattern in [pattern1, pattern2, pattern9]:
-                start_year, start_month, end_year, end_month = match.groups()
-                start_date = f"{start_year}-{start_month.zfill(2)}-01"
-                end_date = f"{end_year}-{end_month.zfill(2)}-01"
-                start = datetime.strptime(start_date, "%Y-%m-%d")
-                end = datetime.strptime(end_date, "%Y-%m-%d")
-            else:
-                start_year, start_month = match.groups()
-                start_date = f"{start_year}-{start_month.zfill(2)}-01"
-                start = datetime.strptime(start_date, "%Y-%m-%d")
-                
-                # 종료일 처리
-                if '현재' in line or '재직중' in line or not re.search(r'[~-–]\s*\d', line):
-                    end = datetime.now()
-                else:
-                    # 종료일 패턴 처리 (일 부분 무시)
-                    end_pattern = r'[~-–]\s*(\d{4})[\.-/](\d{1,2})(?:[\.-/]\d{1,2})?'
-                    end_match = re.search(end_pattern, line)
-                    if end_match:
-                        end_year, end_month = end_match.groups()
-                        end_date = f"{end_year}-{end_month.zfill(2)}-01"
-                        end = datetime.strptime(end_date, "%Y-%m-%d")
-                    else:
-                        end = datetime.now()
-            
-            months = (end.year - start.year) * 12 + (end.month - start.month) + 1
-            total_months += months
-            
-            years = months // 12
-            remaining_months = months % 12
-            decimal_years = round(months / 12, 1)
-            
-            period_str = f"{start.year}-{str(start.month).zfill(2)}~{end.year}-{str(end.month).zfill(2)} ({years}년 {remaining_months}개월, {decimal_years}년)"
-            if current_company:
-                period_str = f"{current_company}: {period_str}"
-            experience_periods.append(period_str)
-    
-    # 총 경력기간 계산
-    total_years = total_months // 12
-    total_remaining_months = total_months % 12
-    total_decimal_years = round(total_months / 12, 1)
-    
-    # 결과 문자열 생성
-    result = "\n".join(experience_periods)
-    if result:
-        result += f"\n\n총 경력기간: {total_years}년 {total_remaining_months}개월 ({total_decimal_years}년)"
-    
-    return result
 
 # 페이지 설정
 st.set_page_config(
@@ -339,27 +143,22 @@ if not check_password():
     st.stop()  # Do not continue if check_password() returned False.
 
 # 데이터 로드 함수
-@st.cache_data(ttl=60)  # 60초마다 캐시 갱신
+@st.cache_data
 def load_data():
     try:
-        # 엑셀 파일 경로
-        file_path = "임직원 기초 데이터.xlsx"
-        
-        # 파일이 존재하는지 확인
-        if not os.path.exists(file_path):
-            st.error(f"파일을 찾을 수 없습니다: {file_path}")
+        # 현재 스크립트의 디렉토리 경로 가져오기
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # 자동으로 엑셀 파일 찾기
+        excel_files = [f for f in os.listdir(current_dir) if f.endswith(('.xlsx', '.xls'))]
+        if excel_files:
+            # 가장 최근 수정된 엑셀 파일 선택
+            latest_file = max(excel_files, key=lambda x: os.path.getmtime(os.path.join(current_dir, x)))
+            file_path = os.path.join(current_dir, latest_file)
+            df = pd.read_excel(file_path)
+            return df
+        else:
+            st.warning("Excel 파일을 찾을 수 없습니다.")
             return None
-            
-        # 파일 수정 시간 확인
-        last_modified = os.path.getmtime(file_path)
-        
-        # 엑셀 파일 읽기
-        df = pd.read_excel(file_path)
-        
-        # 데이터 로드 시간 표시
-        st.sidebar.markdown(f"*마지막 데이터 업데이트: {datetime.fromtimestamp(last_modified).strftime('%Y-%m-%d %H:%M:%S')}*")
-        
-        return df
     except Exception as e:
         st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
         return None
@@ -452,8 +251,6 @@ if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
     st.session_state.menu = "📈 연도별 인원 통계"
 if st.sidebar.button("🔍 임직원 검색", use_container_width=True):
     st.session_state.menu = "🔍 임직원 검색"
-if st.sidebar.button("😊 임직원 명부", use_container_width=True):
-    st.session_state.menu = "😊 임직원 명부"
 
 st.sidebar.markdown("---")
 
@@ -465,8 +262,6 @@ if st.sidebar.button("📋 채용_처우협상", use_container_width=True):
     st.session_state.menu = "📋 채용_처우협상"
 if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
     st.session_state.menu = "⏰ 초과근무 조회"
-if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
-    st.session_state.menu = "📅 인사발령 내역"
 
 # 채용서포트 링크 추가
 st.sidebar.markdown("---")
@@ -1278,44 +1073,7 @@ try:
             
             # 직군 상세 목록
             job_roles = list(job_mapping.keys())
-            # 경력입력 폼 생성
-            with st.form("experience_form"):
-                experience_text = st.text_area("경력기간 입력 (이력서의 날짜 부분을 복사해서 붙여주세요.)", 
-                                             help="# 날짜 패턴 : # 날짜 패턴 : 2023. 04, 2024.05.01, 2024.05, 2024-05, 2024-05-01, 2024/05, 2024/05/01, 2023/05, 2015.01.")
-                
-                # 경력기간 조회 버튼 추가
-                experience_submitted = st.form_submit_button("경력기간 조회")
-                
-                if experience_submitted and experience_text:
-                    try:
-                        # 경력기간 계산
-                        experience_result = calculate_experience(experience_text)
-                        if experience_result:
-                            # 경력기간과 총 경력기간 분리
-                            experience_lines = experience_result.split('\n')
-                            total_experience = experience_lines[-1]  # 마지막 줄이 총 경력기간
-                            experience_periods = experience_lines[:-2]  # 마지막 두 줄(총 경력기간과 빈 줄) 제외
-                            
-                            # 총 경력기간을 소수점으로 변환
-                            total_match = re.search(r'총 경력기간: (\d+)년 (\d+)개월', total_experience)
-                            if total_match:
-                                years, months = map(int, total_match.groups())
-                                total_years = years + months / 12
-                                total_experience = f"총 경력기간: {total_years:.1f}년"
-                            
-                            # 경력기간 표시
-                            st.markdown(f"**{total_experience}**")
-                            st.markdown("**경력기간:**")
-                            for period in experience_periods:
-                                st.markdown(period)
-                        else:
-                            st.markdown("**경력기간:** 경력 정보가 없습니다.")
-                            st.session_state['years'] = 0.0
-                        # 인정경력(년) 필드 업데이트
-                        st.query_params["years"] = float(f"{total_years:.1f}")
-                    except Exception as e:
-                        st.error(f"경력기간 계산 중 오류가 발생했습니다: {str(e)}")
-
+            
             # 입력 폼 생성
             with st.form("salary_form"):
                 # 1줄: 포지션명, 후보자명
@@ -1336,17 +1094,16 @@ try:
                 with col6:
                     desired_salary = st.number_input("희망연봉 (만원)", min_value=0, step=100)
                 with col7:
-                    years = st.number_input("인정경력 (년)", min_value=-4.0, value=float(st.session_state.get('years', st.query_params.get("years", 0.0))), step=0.1, format="%.1f")
+                    years = st.number_input("인정경력 (년)", min_value=-4.0, value=0.0, step=0.1, format="%.1f")
                 
-              
-                # 4줄: 특이사항
+                # 3줄: 특이사항
                 education_notes = st.text_input("특이사항", "")
                 
                 # 분석하기 버튼
                 submitted = st.form_submit_button("분석하기")
 
                 if submitted:
-                    try:                      
+                    try:
                         # salary_table.xlsx 파일 읽기
                         salary_table = pd.read_excel("salary_table.xlsx")
                         
@@ -1354,12 +1111,7 @@ try:
                         selected_job_category = job_mapping[job_role]
                         
                         # 해당 직군과 연차에 맞는 데이터 필터링
-                        try:
-                            years_int = int(float(years))  # 연차를 float로 변환 후 정수로 변환
-                        except (ValueError, TypeError):
-                            st.error(f"경력 기간을 정수로 변환하는 중 오류가 발생했습니다. 입력된 경력 기간: {years}")
-                            st.stop()
-                            
+                        years_int = int(years)  # 연차를 정수로 변환
                         filtered_data = salary_table[
                             (salary_table['직군'] == selected_job_category) & 
                             (salary_table['연차'] == years_int)
@@ -1685,328 +1437,6 @@ try:
                     st.error(f"파일을 읽는 중 오류가 발생했습니다: {str(e)}")
             else:
                 st.info("초과근무 엑셀 파일을 업로드하세요.")
-
-        elif menu == "😊 임직원 명부":
-            st.markdown("##### 😊 임직원 명부")
-            # 조회 조건
-            col1, col2, col3, col4, col5 = st.columns(5)
-            
-            with col1:
-                query_date = st.date_input("조회일자", datetime.now())
-            
-            with col2:
-                name = st.text_input("성명")
-            
-            with col3:
-                employment_type = st.selectbox(
-                    "고용구분",
-                    ["전체", "정규직", "계약직"]
-                )
-            
-            with col4:
-                employment_status = st.selectbox(
-                    "재직상태",
-                    ["전체", "재직", "퇴직"]
-                )
-            
-            with col5:
-                show_department_history = st.checkbox("해당 시점부서 추가")
-            
-            # 데이터 로드
-            @st.cache_data
-            def load_employee_data():
-                try:
-                    # 파일 경로를 절대 경로로 변경
-                    import os
-                    current_dir = os.path.dirname(os.path.abspath(__file__))
-                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
-                    
-                    # 파일이 존재하는지 확인
-                    if not os.path.exists(file_path):
-                        st.error(f"파일을 찾을 수 없습니다: {file_path}")
-                        return None, None
-                    
-                    # 파일 읽기
-                    df = pd.read_excel(file_path, sheet_name=0)  # 첫 번째 시트 사용
-                    df_history = pd.read_excel(file_path, sheet_name=1)  # 두 번째 시트 사용
-                    
-                    # 컬럼 이름 재정의
-                    df.columns = df.columns.str.strip()  # 컬럼 이름의 공백 제거
-                    df_history.columns = df_history.columns.str.strip()  # 컬럼 이름의 공백 제거
-                    
-                    # 날짜 컬럼 형식 통일
-                    date_columns = ['입사일', '퇴사일', '발령일']
-                    for col in date_columns:
-                        if col in df.columns:
-                            df[col] = pd.to_datetime(df[col], errors='coerce')
-                        if col in df_history.columns:
-                            df_history[col] = pd.to_datetime(df_history[col], errors='coerce')
-                    
-                    # None 값 처리
-                    df = df.fillna('')
-                    df_history = df_history.fillna('')
-                    
-                    return df, df_history
-                except Exception as e:
-                    st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
-                    return None, None
-            
-            df, df_history = load_employee_data()
-            
-            # 조회일자 기준으로 재직중인 직원 필터링
-            df = df[
-                (df['입사일'] <= pd.Timestamp(query_date)) &  # 입사일이 조회일자 이전
-                (
-                    (df['퇴사일'].isna()) |  # 퇴사일이 없는 경우
-                    (df['퇴사일'] >= pd.Timestamp(query_date))  # 퇴사일이 조회일자 이후
-                )
-            ]
-            
-            # 조회일자 기준으로 인사발령 데이터 필터링
-            df_history_filtered = df_history[df_history['발령일'] <= pd.Timestamp(query_date)]
-            
-            # 각 직원별 가장 최근 발령 데이터만 선택
-            df_history_filtered = df_history_filtered.sort_values('발령일').groupby('성명').last().reset_index()
-            
-            # 기본 컬럼 설정
-            se_columns = [
-                "사번", "성명", "본부", "팀", "직무", "직위", "직책", "입사일", 
-                "재직기간", "정규직전환일", "고용구분", "재직상태", "생년월일", 
-                "남/여", "만나이", "퇴사일", "학력", "최종학교", "전공", 
-                "경력사항", "휴직상태"
-            ]
-            
-            history_columns = [
-                "발령일", "구분", "성명", "변경후_본부",  "변경후_팀", "변경후_직책"
-            ]
-            
-            # 재직기간 계산 함수
-            def calculate_employment_period(row):
-                if pd.isna(row['입사일']):
-                    return None
-                
-                start_date = pd.to_datetime(row['입사일'])
-                
-                # 재직상태가 '퇴직'인 경우 퇴사일을 기준으로 계산
-                if row['재직상태'] == '퇴직' and pd.notna(row['퇴사일']):
-                    end_date = pd.to_datetime(row['퇴사일'])
-                else:
-                    # 그 외의 경우 조회일자를 기준으로 계산
-                    end_date = pd.Timestamp(query_date)
-                
-                years = (end_date - start_date).days // 365
-                months = ((end_date - start_date).days % 365) // 30
-                
-                return f"{years}년 {months}개월"
-            
-            # 데이터 필터링
-            if name:
-                df = df[df['성명'].str.contains(name, na=False)]
-            
-            if employment_type != "전체":
-                df = df[df['고용구분'] == employment_type]
-            
-            if employment_status != "전체":
-                df = df[df['재직상태'] == employment_status]
-            
-            # 재직기간 계산
-            df['재직기간'] = df.apply(calculate_employment_period, axis=1)
-            
-            # 부서 이력 데이터 처리
-            if show_department_history:
-                # 인사발령 데이터와 조인
-                df_merged = pd.merge(
-                    df, 
-                    df_history_filtered, 
-                    left_on='성명', 
-                    right_on='성명', 
-                    how='left',
-                    suffixes=('', '_history')  # 중복 컬럼에 접미사 추가
-                )
-                
-                # 발령이 없는 경우 기본값 설정
-                df_merged['변경후_본부'] = df_merged['변경후_본부'].fillna(df_merged['본부'])
-                df_merged['변경후_팀'] = df_merged['변경후_팀'].fillna(df_merged['팀'])
-                df_merged['변경후_직책'] = df_merged['변경후_직책'].fillna(df_merged['직책'])
-                
-                # 컬럼 순서 조정
-                display_columns = se_columns + [col for col in history_columns if col not in se_columns]
-                df_display = df_merged[display_columns]
-            else:
-                df_display = df[se_columns]
-            
-            # 데이터 표시
-            df_display = df_display.reset_index(drop=True)
-            df_display.index = df_display.index + 1
-            df_display = df_display.reset_index()
-            df_display = df_display.rename(columns={'index': 'No'})
-            
-            # 날짜 컬럼의 시간 제거
-            date_columns = ['정규직전환일', '입사일', '퇴사일', '생년월일', '발령일']
-            for col in date_columns:
-                if col in df_display.columns:
-                    df_display[col] = pd.to_datetime(df_display[col]).dt.date
-            
-            # 데이터 수에 따라 높이 동적 조정 (행당 35픽셀)
-            row_height = 35  # 각 행의 예상 높이
-            dynamic_height = min(len(df_display) * row_height + 40, 600)  # 헤더 높이 추가, 최대 600픽셀로 제한
-            
-            st.dataframe(
-                df_display,
-                use_container_width=True,
-                hide_index=True,
-                height=dynamic_height,
-                column_config={
-                   "직무": st.column_config.Column(width=70),
-                   "최종학교": st.column_config.Column(width=70),
-                   "전공": st.column_config.Column(width=70),
-                   "경력사항": st.column_config.Column(width=70)
-                }
-            )
-            
-            # 엑셀 다운로드 버튼
-            @st.cache_data
-            def convert_df_to_excel(df):
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df.to_excel(writer, index=False, sheet_name='임직원명부')
-                processed_data = output.getvalue()
-                return processed_data
-            
-            excel_data = convert_df_to_excel(df_display)
-            st.download_button(
-                label="📥 엑셀 다운로드",
-                data=excel_data,
-                file_name=f"임직원명부_{query_date.strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        elif menu == "📅 인사발령 내역":
-            st.markdown("##### 📅 인사발령 내역")
-            
-            # 데이터 로드
-            @st.cache_data
-            def load_promotion_data():
-                try:
-                    # 파일 경로를 절대 경로로 변경
-                    import os
-                    current_dir = os.path.dirname(os.path.abspath(__file__))
-                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
-                    
-                    # 파일이 존재하는지 확인
-                    if not os.path.exists(file_path):
-                        st.error(f"파일을 찾을 수 없습니다: {file_path}")
-                        return None
-                    
-                    # 파일 읽기 (sheet2)
-                    df_promotion = pd.read_excel(file_path, sheet_name=1)
-                    
-                    # 컬럼 이름 재정의
-                    df_promotion.columns = df_promotion.columns.str.strip()
-                    
-                    # 날짜 컬럼 형식 통일
-                    df_promotion['발령일'] = pd.to_datetime(df_promotion['발령일'], errors='coerce')
-                    
-                    # None 값 처리
-                    df_promotion = df_promotion.fillna('')
-                    
-                    # 발령일이 유효한 날짜인 행만 필터링
-                    df_promotion = df_promotion[pd.notna(df_promotion['발령일'])]
-                    
-                    # 발령년도 추출 (NA 값 처리)
-                    df_promotion['발령년도'] = df_promotion['발령일'].dt.year
-                    df_promotion['발령년도'] = df_promotion['발령년도'].fillna(0).astype(int)
-                    
-                    return df_promotion
-                except Exception as e:
-                    st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
-                    return None
-            
-            df_promotion = load_promotion_data()
-            
-            if df_promotion is not None:
-                # 조회 조건
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    current_year = datetime.now().year
-                    years = sorted(df_promotion['발령일'].dt.year.unique(), reverse=True)
-                    selected_year = st.selectbox("발령 연도", ["전체"] + years, index=0)
-                
-                with col2:
-                    name = st.text_input("성명")
-                
-                with col3:
-                    promotion_types = sorted(df_promotion['구분'].unique())
-                    selected_types = st.multiselect("발령구분", promotion_types)
-                
-                # 데이터 필터링
-                filtered_df = df_promotion.copy()
-                
-                if selected_year != "전체":
-                    filtered_df = filtered_df[filtered_df['발령일'].dt.year == selected_year]
-                
-                if name:
-                    filtered_df = filtered_df[filtered_df['성명'].str.contains(name, na=False)]
-                
-                if selected_types:
-                    filtered_df = filtered_df[filtered_df['구분'].isin(selected_types)]
-                
-                # 표시할 컬럼 설정
-                display_columns = [
-                    "발령일", "구분", "성명", 
-                    "변경전_본부", "변경전_실", "변경전_팀", "변경전_직책",
-                    "변경후_본부", "변경후_실", "변경후_팀", "변경후_직책", "비고"
-                ]
-                
-                # 데이터 표시
-                df_display = filtered_df[display_columns].copy()
-                df_display = df_display.sort_values('발령일', ascending=False)
-                df_display = df_display.reset_index(drop=True)
-                df_display.index = df_display.index + 1
-                df_display = df_display.reset_index()
-                df_display = df_display.rename(columns={'index': 'No'})
-                
-                # 날짜 컬럼의 시간 제거
-                df_display['발령일'] = pd.to_datetime(df_display['발령일']).dt.date
-                
-                # 데이터프레임 표시
-                if not filtered_df.empty:
-                    # 데이터 정렬 및 인덱스 설정
-                    display_df = filtered_df[display_columns].sort_values('발령일', ascending=False).reset_index(drop=True)
-                    display_df.index = display_df.index + 1  # 인덱스를 1부터 시작하도록 설정
-                    
-                    # 발령일 컬럼의 시간 제거
-                    display_df['발령일'] = pd.to_datetime(display_df['발령일']).dt.strftime('%Y-%m-%d')
-                    
-                    # 데이터 수에 따라 높이 동적 조정 (행당 35픽셀)
-                    row_height = 35  # 각 행의 예상 높이
-                    dynamic_height = min(len(display_df) * row_height + 40, 600)  # 헤더 높이 추가, 최대 600픽셀로 제한
-                    
-                    st.dataframe(
-                        display_df,
-                        use_container_width=True,
-                        height=dynamic_height
-                    )
-                else:
-                    st.warning("조회된 데이터가 없습니다.")
-                
-                # 엑셀 다운로드 버튼
-                @st.cache_data
-                def convert_df_to_excel(df):
-                    output = BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df.to_excel(writer, index=False, sheet_name='인사발령내역')
-                    processed_data = output.getvalue()
-                    return processed_data
-                
-                excel_data = convert_df_to_excel(df_display)
-                st.download_button(
-                    label="📥 엑셀 다운로드",
-                    data=excel_data,
-                    file_name=f"인사발령내역_{selected_year}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
 
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}") 
