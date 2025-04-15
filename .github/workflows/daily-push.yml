@@ -54,10 +54,6 @@ jobs:
           git lfs track "*.xlsx"
           git add .gitattributes
           
-          # Emp_Data.xlsx 파일만 상태 초기화
-          git rm --cached Emp_Data.xlsx
-          git checkout -- Emp_Data.xlsx
-          
           # 파일 추가
           git add Emp_Data.xlsx
           
