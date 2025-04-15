@@ -971,13 +971,40 @@ try:
                 
                 return total, regular, contract
             
-            # 하드코딩된 데이터로 DataFrame 생성
+            # 연도별 입/퇴사 인원 계산 함수 (get_year_end_headcount 함수 다음에 추가)
+            @st.cache_data(ttl=3600)  # 1시간 캐시 유지
+            def get_year_employee_stats(df, year):
+                # 정규직 입사
+                reg_join = len(df[(df['고용구분'] == '정규직') & 
+                                  (df['입사일'].dt.year == year)])
+                
+                # 정규직 퇴사
+                reg_leave = len(df[(df['고용구분'] == '정규직') & 
+                                   (df['퇴사일'].dt.year == year)])
+                
+                # 계약직 입사
+                contract_join = len(df[(df['고용구분'] == '계약직') & 
+                                      (df['입사일'].dt.year == year)])
+                
+                # 계약직 퇴사
+                contract_leave = len(df[(df['고용구분'] == '계약직') & 
+                                       (df['퇴사일'].dt.year == year)])
+                
+                return reg_join, reg_leave, contract_join, contract_leave
+            
+            # stats_df 생성 부분을 다음과 같이 수정
             stats_df = pd.DataFrame([
-                {'연도': 2021, '전체': get_year_end_headcount(df, 2021)[0], '정규직_전체': get_year_end_headcount(df, 2021)[1], '계약직_전체': get_year_end_headcount(df, 2021)[2], '정규직_입사': 40, '정규직_퇴사': 24, '계약직_입사': 6, '계약직_퇴사': 6},
-                {'연도': 2022, '전체': get_year_end_headcount(df, 2022)[0], '정규직_전체': get_year_end_headcount(df, 2022)[1], '계약직_전체': get_year_end_headcount(df, 2022)[2], '정규직_입사': 46, '정규직_퇴사': 16, '계약직_입사': 12, '계약직_퇴사': 11},
-                {'연도': 2023, '전체': get_year_end_headcount(df, 2023)[0], '정규직_전체': get_year_end_headcount(df, 2023)[1], '계약직_전체': get_year_end_headcount(df, 2023)[2], '정규직_입사': 30, '정규직_퇴사': 14, '계약직_입사': 21, '계약직_퇴사': 19},
-                {'연도': 2024, '전체': get_year_end_headcount(df, 2024)[0], '정규직_전체': get_year_end_headcount(df, 2024)[1], '계약직_전체': get_year_end_headcount(df, 2024)[2], '정규직_입사': 55, '정규직_퇴사': 23, '계약직_입사': 6, '계약직_퇴사': 10},
-                {'연도': 2025, '전체': get_year_end_headcount(df, 2025)[0], '정규직_전체': get_year_end_headcount(df, 2025)[1], '계약직_전체': get_year_end_headcount(df, 2025)[2], '정규직_입사': 7, '정규직_퇴사': 3, '계약직_입사': 1, '계약직_퇴사': 1}
+                {
+                    '연도': year,
+                    '전체': get_year_end_headcount(df, year)[0],
+                    '정규직_전체': get_year_end_headcount(df, year)[1],
+                    '계약직_전체': get_year_end_headcount(df, year)[2],
+                    '정규직_입사': get_year_employee_stats(df, year)[0],
+                    '정규직_퇴사': get_year_employee_stats(df, year)[1],
+                    '계약직_입사': get_year_employee_stats(df, year)[2],
+                    '계약직_퇴사': get_year_employee_stats(df, year)[3]
+                }
+                for year in range(2021, 2026)  # 2021년부터 2025년까지
             ])
             
             # 그래프를 위한 컬럼 생성 (50:50 비율)
