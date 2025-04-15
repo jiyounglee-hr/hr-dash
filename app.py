@@ -692,13 +692,13 @@ try:
                 
                 with list_col1:
                     st.markdown("##### ㆍ2025년 입사자")
-                    입사자_df = df[df['정규직전환연도'] == 2025][['성명', '팀', '직위', '정규직전환일']]
+                    입사자_df = df[df['정규직전환연도'] == 2025][['성명', '팀', '직위', '입사일']]
                     if not 입사자_df.empty:
-                        입사자_df = 입사자_df.sort_values('정규직전환일')
+                        입사자_df = 입사자_df.sort_values('입사일')
                         입사자_df = 입사자_df.reset_index(drop=True)
                         입사자_df.index = 입사자_df.index + 1
                         입사자_df = 입사자_df.rename_axis('No.')
-                        st.dataframe(입사자_df.style.format({'정규직전환일': lambda x: x.strftime('%Y-%m-%d')}),
+                        st.dataframe(입사자_df.style.format({'입사일': lambda x: x.strftime('%Y-%m-%d')}),
                                    use_container_width=True)
                     else:
                         st.info("2025년 입사 예정자가 없습니다.")
