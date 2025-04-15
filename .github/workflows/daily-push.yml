@@ -38,14 +38,21 @@ jobs:
         
     - name: Check and commit changes
       run: |
+        # Git LFS 캐시 초기화
+        git lfs prune
+        git lfs fetch --all
+        git lfs checkout
+        
         # 파일이 존재하는지 확인
         if [ -f "Emp_Data.xlsx" ]; then
           echo "Emp_Data.xlsx 파일이 존재합니다."
-          # Git LFS로 파일 추가
+          # 파일 상태 강제 갱신
+          git rm --cached Emp_Data.xlsx
           git lfs track Emp_Data.xlsx
           git add .gitattributes
           git add Emp_Data.xlsx
           
+          # 변경사항 확인
           if git diff --staged --quiet; then
             echo "변경사항이 없습니다."
             exit 0
