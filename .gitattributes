@@ -1,1 +1,2 @@
 Emp_Data.xlsx filter=lfs diff=lfs merge=lfs -text
+salary_table.xlsx filter=lfs diff=lfs merge=lfs -text
