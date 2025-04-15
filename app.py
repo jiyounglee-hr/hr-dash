@@ -15,6 +15,7 @@ import re
 import plotly.io as pio
 import numpy as np
 from dateutil.relativedelta import relativedelta
+import time
 
 # 날짜 정규화 함수
 def normalize_date(date_str):
@@ -337,31 +338,44 @@ def check_password():
 if not check_password():
     st.stop()  # Do not continue if check_password() returned False.
 
-# 데이터 로드 함수
+# 엑셀 파일의 마지막 수정 시간을 추적하는 변수
+last_modified_time = None
+
 @st.cache_data(ttl=60)  # 60초마다 캐시 갱신
 def load_data():
+    global last_modified_time
+    file_path = "Emp_Data.xlsx"
+    
+    # 파일이 존재하는지 확인
+    if not os.path.exists(file_path):
+        st.error("엑셀 파일을 찾을 수 없습니다.")
+        return None
+    
+    # 파일의 마지막 수정 시간 확인
+    current_modified_time = os.path.getmtime(file_path)
+    
+    # 파일이 변경되었는지 확인
+    if last_modified_time is not None and current_modified_time > last_modified_time:
+        st.info("데이터가 업데이트되었습니다. 페이지를 새로고침하세요.")
+        st.cache_data.clear()  # 캐시 초기화
+    
+    last_modified_time = current_modified_time
+    
     try:
-        # 엑셀 파일 경로
-        file_path = "Emp_Data.xlsx"
-        
-        # 파일이 존재하는지 확인
-        if not os.path.exists(file_path):
-            st.error(f"파일을 찾을 수 없습니다: {file_path}")
-            return None
-            
-        # 파일 수정 시간 확인
-        last_modified = os.path.getmtime(file_path)
-        
         # 엑셀 파일 읽기
         df = pd.read_excel(file_path)
-        
-        # 데이터 로드 시간 표시
-        st.sidebar.markdown(f"*마지막 데이터 업데이트: {datetime.fromtimestamp(last_modified).strftime('%Y-%m-%d %H:%M:%S')}*")
-        
         return df
     except Exception as e:
-        st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
+        st.error(f"데이터 로드 중 오류가 발생했습니다: {str(e)}")
         return None
+
+# 사이드바에 마지막 업데이트 시간 표시
+def show_last_update():
+    file_path = "Emp_Data.xlsx"
+    if os.path.exists(file_path):
+        last_modified = os.path.getmtime(file_path)
+        last_modified_str = datetime.fromtimestamp(last_modified).strftime('%Y-%m-%d %H:%M:%S')
+        st.sidebar.info(f"마지막 업데이트: {last_modified_str}")
 
 # CSS 스타일 추가
 st.markdown("""
