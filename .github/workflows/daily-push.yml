@@ -8,12 +8,15 @@ on:
 jobs:
   push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
         lfs: true
+        token: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Set up Git
       run: |
@@ -21,39 +24,18 @@ jobs:
         git config --global user.email "actions@github.com"
         git config --global core.quotepath false
         
-    - name: Set up Git LFS
-      run: |
-        git lfs install
-        git lfs track "*.xlsx"
-        git add .gitattributes
-        
     - name: Debug Info
       run: |
         echo "현재 디렉토리 내용:"
         ls -la
         echo "Git 상태:"
         git status
-        echo "Git LFS 상태:"
-        git lfs status
         
     - name: Check and commit changes
       run: |
-        # 파일 존재 여부 확인
-        if [ -f "임직원 기초 데이터.xlsx" ]; then
-          echo "임직원 기초 데이터.xlsx 파일이 존재합니다."
-          git add "임직원 기초 데이터.xlsx"
-        else
-          echo "임직원 기초 데이터.xlsx 파일이 존재하지 않습니다."
-        fi
+        git add Emp_Data.xlsx
+        git add salary_table.xlsx
         
-        if [ -f "salary_table.xlsx" ]; then
-          echo "salary_table.xlsx 파일이 존재합니다."
-          git add "salary_table.xlsx"
-        else
-          echo "salary_table.xlsx 파일이 존재하지 않습니다."
-        fi
-        
-        # 변경사항 확인
         if git diff --staged --quiet; then
           echo "변경사항이 없습니다."
           exit 0
