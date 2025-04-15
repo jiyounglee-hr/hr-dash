@@ -313,9 +313,9 @@ def check_password():
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
             st.markdown('<div class="password-input">', unsafe_allow_html=True)
-            st.text_input(
-                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
-            )
+        st.text_input(
+            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+        )
             st.markdown('</div>', unsafe_allow_html=True)
         return False
     elif not st.session_state["password_correct"]:
@@ -324,11 +324,11 @@ def check_password():
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
             st.markdown('<div class="password-input">', unsafe_allow_html=True)
-            st.text_input(
-                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
-            )
+        st.text_input(
+            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+        )
             st.markdown('</div>', unsafe_allow_html=True)
-            st.error("😕 비밀번호가 올바르지 않습니다")
+        st.error("😕 비밀번호가 올바르지 않습니다")
         return False
     else:
         # Password correct.
@@ -343,7 +343,7 @@ if not check_password():
 def load_data():
     try:
         # 엑셀 파일 경로
-        file_path = "임직원 기초 데이터.xlsx"
+        file_path = "Emp_Data.xlsx"
         
         # 파일이 존재하는지 확인
         if not os.path.exists(file_path):
@@ -1013,7 +1013,7 @@ try:
             
             with search_col:
                 st.markdown('<div class="search-container">', unsafe_allow_html=True)
-                search_name = st.text_input("성명으로 검색", key="contact_search")
+            search_name = st.text_input("성명으로 검색", key="contact_search")
                 st.markdown('</div>', unsafe_allow_html=True)
             
             if search_name:
@@ -1719,7 +1719,7 @@ try:
                     # 파일 경로를 절대 경로로 변경
                     import os
                     current_dir = os.path.dirname(os.path.abspath(__file__))
-                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    file_path = os.path.join(current_dir, "Emp_Data.xlsx")
                     
                     # 파일이 존재하는지 확인
                     if not os.path.exists(file_path):
@@ -1891,7 +1891,7 @@ try:
                     # 파일 경로를 절대 경로로 변경
                     import os
                     current_dir = os.path.dirname(os.path.abspath(__file__))
-                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    file_path = os.path.join(current_dir, "Emp_Data.xlsx")
                     
                     # 파일이 존재하는지 확인
                     if not os.path.exists(file_path):
