@@ -29,8 +29,13 @@ jobs:
         
     - name: Check and commit changes
       run: |
-        git add "임직원 기초 데이터.xlsx"
-        git add "salary_table.xlsx"
+        # 파일 이름에 공백이 있는 경우를 위해 따옴표로 감싸서 처리
+        FILES=("임직원 기초 데이터.xlsx" "salary_table.xlsx")
+        for file in "${FILES[@]}"; do
+          if [ -f "$file" ]; then
+            git add "$file"
+          fi
+        done
         
         if git diff --staged --quiet; then
           echo "No changes detected"
