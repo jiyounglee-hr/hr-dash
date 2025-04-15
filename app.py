@@ -313,9 +313,9 @@ def check_password():
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
             st.markdown('<div class="password-input">', unsafe_allow_html=True)
-        st.text_input(
-            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
-        )
+            st.text_input(
+                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+            )
             st.markdown('</div>', unsafe_allow_html=True)
         return False
     elif not st.session_state["password_correct"]:
@@ -324,11 +324,10 @@ def check_password():
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
             st.markdown('<div class="password-input">', unsafe_allow_html=True)
-        st.text_input(
-            "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
-        )
+            st.text_input(
+                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+            )
             st.markdown('</div>', unsafe_allow_html=True)
-        st.error("😕 비밀번호가 올바르지 않습니다")
         return False
     else:
         # Password correct.
