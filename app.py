@@ -339,7 +339,7 @@ if not check_password():
     st.stop()  # Do not continue if check_password() returned False.
 
 # 데이터 로드 함수
-@st.cache_data(ttl=60)  # 60초마다 캐시 갱신
+@st.cache_data(ttl=300)  # 5분마다 캐시 갱신
 def load_data():
     try:
         # 엑셀 파일 경로
@@ -363,6 +363,41 @@ def load_data():
     except Exception as e:
         st.error(f"파일을 불러오는 중 오류가 발생했습니다: {str(e)}")
         return None
+
+# 날짜 변환 함수 캐싱
+@st.cache_data(ttl=3600)  # 1시간 캐시 유지
+def convert_date(date_value):
+    if pd.isna(date_value):
+        return pd.NaT
+    try:
+        # 엑셀 숫자 형식의 날짜 처리
+        if isinstance(date_value, (int, float)):
+            return pd.Timestamp('1899-12-30') + pd.Timedelta(days=int(date_value))
+        
+        # 문자열로 변환
+        date_str = str(date_value)
+        
+        # 여러 날짜 형식 시도
+        formats = ['%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d', '%Y%m%d']
+        for fmt in formats:
+            try:
+                return pd.to_datetime(date_str, format=fmt)
+            except:
+                continue
+        
+        # 모든 형식이 실패하면 기본 변환 시도
+        return pd.to_datetime(date_str)
+    except:
+        return pd.NaT
+
+# 엑셀 다운로드 함수 캐싱
+@st.cache_data(ttl=3600)  # 1시간 캐시 유지
+def convert_df_to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='임직원명부')
+    processed_data = output.getvalue()
+    return processed_data
 
 # CSS 스타일 추가
 st.markdown("""
@@ -1885,7 +1920,7 @@ try:
             st.markdown("##### 📅 인사발령 내역")
             
             # 데이터 로드
-            @st.cache_data
+            @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
             def load_promotion_data():
                 try:
                     # 파일 경로를 절대 경로로 변경
