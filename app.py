@@ -1012,9 +1012,8 @@ try:
             
             with search_col:
                 st.markdown('<div class="search-container">', unsafe_allow_html=True)
-            search_name = st.text_input("성명으로 검색", key="contact_search")
+                search_name = st.text_input("성명으로 검색", key="contact_search")
                 st.markdown('</div>', unsafe_allow_html=True)
-            
             if search_name:
                 contact_df = df[df['성명'].str.contains(search_name, na=False)]
                 if not contact_df.empty:
