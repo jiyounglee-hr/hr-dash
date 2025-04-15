@@ -726,7 +726,7 @@ try:
                 
                 with col1:
                     # 퇴사연도 선택 드롭다운
-                    available_years = sorted(df[df['재직상태'] == '퇴직']['퇴사연도'].dropna().unique())
+                    available_years = sorted(df[df['재직상태'] == '퇴직']['퇴사연도'].dropna().astype(int).unique())
                     default_index = list(['전체'] + list(available_years)).index(2025) if 2025 in available_years else 0
                     selected_year = st.selectbox(
                         "퇴사연도 선택",
