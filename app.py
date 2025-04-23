@@ -1329,7 +1329,7 @@ try:
                     
                     # 인원상세 목록
                     st.markdown("###### 🧑 인원상세")
-                    detail_columns = ['성명', '본부', '실', '팀', '고용구분', '입사일', '재직상태', '구분1', '구분2', '구분3']
+                    detail_columns = ['성명', '본부', '실', '팀', '고용구분', '입사일', '재직상태', '남/여', '구분1', '구분2', '구분3']
                     detail_df = current_employees[detail_columns].copy()
                     detail_df['입사일'] = detail_df['입사일'].dt.strftime('%Y-%m-%d')
                     
@@ -1351,6 +1351,7 @@ try:
                             "고용구분": st.column_config.TextColumn("고용구분", width=80),
                             "입사일": st.column_config.TextColumn("입사일", width=100),
                             "재직상태": st.column_config.TextColumn("재직상태", width=80),
+                            "성별": st.column_config.TextColumn("남/여", width=60),
                             "구분1": st.column_config.TextColumn("구분1", width=120),
                             "구분2": st.column_config.TextColumn("구분2", width=120),
                             "구분3": st.column_config.TextColumn("구분3", width=120)
