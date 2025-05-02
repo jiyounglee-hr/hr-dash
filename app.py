@@ -340,7 +340,7 @@ st.markdown("""
         padding: 0.4rem !important;
         min-height: 0 !important;
         height: auto !important;
-        line-height: 1.2 !important;
+        line-height: 1 !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] {
         width: 80% !important;
