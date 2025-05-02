@@ -345,11 +345,13 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stExpander"] {
         width: 80% !important;
         margin: 0.1rem auto !important;
+        padding: 0.5rem !important;
         display: block !important;
     }
     [data-testid="stSidebar"] section[data-testid="stSidebarNav"] {
         padding-top: 0.5rem !important;
         padding-bottom: 0.5rem !important;
+        line-height: 1.4 !important;
     }
     [data-testid="stSidebar"] hr {
         margin: 0.5rem 0 !important;
