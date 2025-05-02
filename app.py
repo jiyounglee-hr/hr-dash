@@ -413,8 +413,9 @@ def load_data():
         # 엑셀 파일 읽기
         df = pd.read_excel(file_path)
         
-        # 데이터 로드 시간 표시
-        st.sidebar.markdown(f"*마지막 데이터 업데이트: {datetime.fromtimestamp(last_modified).strftime('%Y년 %m월 %d일 %H시 %M분 %S초')}*")
+        # 데이터 로드 시간 표시 (한국 시간대 적용)
+        kst_time = datetime.fromtimestamp(last_modified, pytz.timezone('Asia/Seoul'))
+        st.sidebar.markdown(f"*마지막 데이터 업데이트: {kst_time.strftime('%Y년 %m월 %d일 %H:%M')}*")
         
         return df
     except Exception as e:
