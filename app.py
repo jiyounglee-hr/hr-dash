@@ -350,8 +350,7 @@ st.markdown("""
     }
     [data-testid="stSidebar"] section[data-testid="stSidebarNav"] {
         padding-top: 0.5rem !important;
-        padding-bottom: 0.1rem !important;
-        line-height: 1.2 !important;
+        padding-bottom: 0.5rem !important;
     }
     [data-testid="stSidebar"] hr {
         margin: 0.5rem 0 !important;
