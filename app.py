@@ -530,7 +530,7 @@ st.markdown("""
         margin: 0 auto !important;
         display: block !important;
     }
-[data-testid="stSidebar"] expander {
+    [data-testid="stSidebar"] expander {
         width: 80% !important;
         margin: 0 auto !important;
         display: block !important;
