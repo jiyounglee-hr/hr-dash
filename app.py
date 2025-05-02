@@ -530,6 +530,11 @@ st.markdown("""
         margin: 0 auto !important;
         display: block !important;
     }
+[data-testid="stSidebar"] expander {
+        width: 80% !important;
+        margin: 0 auto !important;
+        display: block !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
