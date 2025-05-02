@@ -337,7 +337,7 @@ st.markdown("""
         width: 80% !important;
         margin: 0.1rem auto !important;
         display: block !important;
-        padding: 0.4rem !important;
+        padding: 0.5rem !important;
         min-height: 0 !important;
         height: auto !important;
         line-height: 1.4 !important;
@@ -435,6 +435,7 @@ def load_data():
         df = pd.read_excel(file_path)
         
         # 데이터 로드 시간 표시 (한국 시간대 적용)
+        st.sidebar.markdown("<br>", unsafe_allow_html=True)
         kst_time = datetime.fromtimestamp(last_modified, pytz.timezone('Asia/Seoul'))
         st.sidebar.markdown(f"*마지막 데이터 업데이트: {kst_time.strftime('%Y년 %m월 %d일 %H:%M')}*")
         
@@ -559,7 +560,7 @@ st.sidebar.title("👥 HRmate")
 st.sidebar.markdown("---")
 
 # HR Data 섹션
-st.sidebar.markdown("### HR Data")
+st.sidebar.markdown("#### HR Data")
 if st.sidebar.button("📊 현재 인원현황", use_container_width=True):
     st.session_state.menu = "📊 현재 인원현황"
 if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
@@ -569,7 +570,7 @@ if st.sidebar.button("🔍 임직원 검색", use_container_width=True):
 if st.sidebar.button("😊 임직원 명부", use_container_width=True):
     st.session_state.menu = "😊 임직원 명부"
 
-st.sidebar.markdown("### HR Surpport")
+st.sidebar.markdown("#### HR Surpport")
 # HR Support 섹션
 if st.sidebar.button("🏦 기관제출용 인원현황", use_container_width=True):
     st.session_state.menu = "🏦 기관제출용 인원현황"
@@ -581,6 +582,7 @@ if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
     st.session_state.menu = "📅 인사발령 내역"
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 with st.sidebar.expander("🚀 채용전형관리"):
     st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️채용 전형 시스템</a>', unsafe_allow_html=True)
     st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/~/+/?page=admin" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️면접 평가서 관리</a>', unsafe_allow_html=True)
