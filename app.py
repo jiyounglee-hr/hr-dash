@@ -562,14 +562,15 @@ st.sidebar.markdown("---")
 
 # HR Support 섹션
 st.sidebar.markdown("### HR Support")
-if st.sidebar.button("🏦 기관제출용 인원현황", use_container_width=True):
-    st.session_state.menu = "🏦 기관제출용 인원현황"
-if st.sidebar.button("📋 채용_처우협상", use_container_width=True):
-    st.session_state.menu = "📋 채용_처우협상"
-if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
-    st.session_state.menu = "⏰ 초과근무 조회"
-if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
-    st.session_state.menu = "📅 인사발령 내역"
+with st.sidebar.expander("📋 인원관리"):
+    if st.button("▫️기관제출용 인원현황", use_container_width=True):
+        st.session_state.menu = "🏦 기관제출용 인원현황"
+    if st.button("▫️채용_처우협상", use_container_width=True):
+        st.session_state.menu = "📋 채용_처우협상"
+    if st.button("▫️초과근무 조회", use_container_width=True):
+        st.session_state.menu = "⏰ 초과근무 조회"
+    if st.button("▫️인사발령 내역", use_container_width=True):
+        st.session_state.menu = "📅 인사발령 내역"
 
 with st.sidebar.expander("🚀 채용전형관리"):
     st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️채용 전형 시스템</a>', unsafe_allow_html=True)
