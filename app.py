@@ -341,6 +341,7 @@ st.markdown("""
         min-height: 0 !important;
         height: auto !important;
         line-height: 1.2 !important;
+        text-align: left !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] {
         width: 80% !important;
