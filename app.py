@@ -337,6 +337,10 @@ st.markdown("""
         width: 80% !important;
         margin: 0 auto !important;
         display: block !important;
+        padding: 0.25rem !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.2 !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] {
         width: 80% !important;
