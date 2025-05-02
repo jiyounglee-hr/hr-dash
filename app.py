@@ -571,8 +571,6 @@ if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
 if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
     st.session_state.menu = "📅 인사발령 내역"
 
-# 채용서포트 링크 추가
-st.sidebar.markdown("---")
 with st.sidebar.expander("🚀 채용전형관리"):
     st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️채용 전형 시스템</a>', unsafe_allow_html=True)
     st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/~/+/?page=admin" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️면접 평가서 관리</a>', unsafe_allow_html=True)
