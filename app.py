@@ -15,6 +15,7 @@ import re
 import plotly.io as pio
 import numpy as np
 from dateutil.relativedelta import relativedelta
+import pytz
 
 # 날짜 정규화 함수
 def normalize_date(date_str):
@@ -413,7 +414,7 @@ def load_data():
         df = pd.read_excel(file_path)
         
         # 데이터 로드 시간 표시
-        st.sidebar.markdown(f"*마지막 데이터 업데이트: {datetime.fromtimestamp(last_modified).strftime('%Y-%m-%d %H:%M:%S')}*")
+        st.sidebar.markdown(f"*마지막 데이터 업데이트: {datetime.fromtimestamp(last_modified).strftime('%Y년 %m월 %d일 %H시 %M분 %S초')}*")
         
         return df
     except Exception as e:
@@ -561,8 +562,9 @@ if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
 
 # 채용서포트 링크 추가
 st.sidebar.markdown("---")
-st.sidebar.markdown("##### 참고 사이트")
-st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📋 채용(이력서 분석)</a>', unsafe_allow_html=True)
+st.sidebar.markdown("##### 참고 사이트") 
+st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">🚀 채용 전형 시스템</a>', unsafe_allow_html=True)
+st.sidebar.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/~/+/?page=admin" target="_blank" class="sidebar-link" style="text-decoration: none;">📋 면접 평가서 관리</a>', unsafe_allow_html=True)
 st.sidebar.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none;">📰 PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
 
 # 기본 메뉴 설정
@@ -1164,7 +1166,7 @@ try:
 
             # 생일자 검색
             st.markdown("##### 🎂이달의 생일자")
-            current_month = datetime.now().month
+            current_month = datetime.now(pytz.timezone('Asia/Seoul')).month
             birth_month = st.selectbox(
                 "생일 월 선택",
                 options=list(range(1, 13)),
