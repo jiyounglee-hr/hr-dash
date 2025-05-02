@@ -333,6 +333,16 @@ st.markdown("""
         text-align: left;
         padding-left: 0;
     }
+    [data-testid="stSidebar"] button {
+        width: 80% !important;
+        margin: 0 auto !important;
+        display: block !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        width: 80% !important;
+        margin: 0 auto !important;
+        display: block !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -526,11 +536,6 @@ st.markdown("""
         text-overflow: ellipsis !important;
     }
     [data-testid="stSidebar"] button {
-        width: 80% !important;
-        margin: 0 auto !important;
-        display: block !important;
-    }
-    [data-testid="stSidebar"] expander {
         width: 80% !important;
         margin: 0 auto !important;
         display: block !important;
