@@ -1,21 +1,32 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 from datetime import datetime, timedelta
+import io
+from io import BytesIO
+import base64
+import json
+import re
+import calendar
+import math
 import os
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.sharepoint.client_context import ClientContext
 from office365.sharepoint.files.file import File
-import io
 import requests
 from PIL import Image
 from io import BytesIO
-import re
 import plotly.io as pio
 import numpy as np
 from dateutil.relativedelta import relativedelta
 import pytz
+import gspread
 
 # 날짜 정규화 함수
 def normalize_date(date_str):
@@ -566,8 +577,8 @@ if st.sidebar.button("📊 인원현황", use_container_width=True):
     st.session_state.menu = "📊 인원현황"
 if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
     st.session_state.menu = "📈 연도별 인원 통계"
-if st.sidebar.button("🪧 인사팀 연간일정", use_container_width=True):
-    st.session_state.menu = "🪧 인사팀 연간일정"
+if st.sidebar.button("🔔 인사팀 업무 공유", use_container_width=True):
+    st.session_state.menu = "🔔 인사팀 업무 공유"
 if st.sidebar.button("🔍 임직원 검색", use_container_width=True):
     st.session_state.menu = "🔍 임직원 검색"
 if st.sidebar.button("😊 임직원 명부", use_container_width=True):
@@ -2278,116 +2289,286 @@ try:
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-        elif menu == "🪧 인사팀 연간일정":
-            st.markdown("##### 🪧 인사팀 연간일정")
+        elif menu == "🔔 인사팀 업무 공유":
+            st.markdown("##### 🔔 인사팀 업무 공유")
+            # 업무보고 데이터 가져오기
+            @st.cache_data(ttl=60)  # 5분마다 캐시 갱신
+            def get_work_report_data():
+                try:
+                    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+                    credentials_dict = {
+                        "type": st.secrets["google_credentials"]["type"],
+                        "project_id": st.secrets["google_credentials"]["project_id"],
+                        "private_key_id": st.secrets["google_credentials"]["private_key_id"],
+                        "private_key": st.secrets["google_credentials"]["private_key"],
+                        "client_email": st.secrets["google_credentials"]["client_email"],
+                        "client_id": st.secrets["google_credentials"]["client_id"],
+                        "auth_uri": st.secrets["google_credentials"]["auth_uri"],
+                        "token_uri": st.secrets["google_credentials"]["token_uri"],
+                        "auth_provider_x509_cert_url": st.secrets["google_credentials"]["auth_provider_x509_cert_url"],
+                        "client_x509_cert_url": st.secrets["google_credentials"]["client_x509_cert_url"]
+                    }
+                    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
+                    gc = gspread.authorize(credentials)
+                    
+                    try:
+                        # 업무보고 시트 ID
+                        sheet_id = st.secrets["google_sheets"]["work_report_id"]
+                        worksheet = gc.open_by_key(sheet_id).worksheet('시트1')  # '업무보고' 시트 선택
+                    except Exception as e:
+                        st.error(f"시트 접근 중 오류 발생: {str(e)}")
+                        return pd.DataFrame()
+                    
+                    try:
+                        # 데이터 가져오기
+                        data = worksheet.get_all_records()
+                        
+                        # 데이터프레임으로 변환
+                        df = pd.DataFrame(data)
+                        
+                        # 보고일 컬럼을 datetime으로 변환
+                        if '보고일' in df.columns:
+                            df['보고일'] = pd.to_datetime(df['보고일'])
+                        
+                        return df
+                    except Exception as e:
+                        st.error(f"데이터 처리 중 오류 발생: {str(e)}")
+                        return pd.DataFrame()
+                        
+                except Exception as e:
+                    st.error(f"인증 중 오류 발생: {str(e)}")
+                    return pd.DataFrame()
+
+            # 업무보고 데이터 로드
+            report_df = get_work_report_data()
+            st.markdown("<br>", unsafe_allow_html=True)
+            if not report_df.empty:
+                st.markdown("###### 업무 공유/보고")
+                
+                # 조회 조건 컬럼 생성
+                col1, col2, col3, col4 = st.columns([0.2, 0.2, 0.2, 0.4])
+                
+                with col1:
+                    # 타입 선택
+                    types = ['전체'] + sorted(report_df['타입'].unique().tolist())
+                    selected_type = st.selectbox('타입', types, index=0)
+                
+                with col2:
+                    # 보고일자 선택 - NaN 값 제외
+                    dates = sorted(report_df[report_df['보고일'].notna()]['보고일'].dt.strftime('%Y-%m-%d').unique().tolist(), reverse=True)
+                    selected_date = st.selectbox('보고일자', dates)
+                
+                with col3:
+                    # 보고상태 선택
+                    status_options = ['보고예정', '보고완료']
+                    selected_status = st.selectbox('보고상태', status_options)
+
+                with col4:
+                    st.write("")
+
+                # 데이터 필터링
+                filtered_df = report_df.copy()
+                
+                if selected_type != '전체':
+                    filtered_df = filtered_df[filtered_df['타입'] == selected_type]
+                
+                if selected_date:
+                    filtered_df = filtered_df[filtered_df['보고일'].dt.strftime('%Y-%m-%d') == selected_date]
+                
+                if selected_status != '전체':
+                    filtered_df = filtered_df[filtered_df['보고상태'] == selected_status]
+
+                # 데이터프레임 정렬
+                filtered_df = filtered_df.sort_values('보고일', ascending=False)
+
+                if not filtered_df.empty:
+                    html_output = []
+                    html_output.append('<table style="width: 70%;">')
+                    
+                    for _, row in filtered_df.iterrows():
+                        html_output.append("<tr>")
+                        # 업무구분 
+                        html_output.append(f'<td style="width: 20%; text-align: left; background-color: #f0f2f6; font-size: 13px;""> {row["업무구분"]}</td>')
+                        # 업무내용
+                        # HTML로 입력된 경우 그대로 사용
+                        업무내용 = row["업무내용"]
+                        if not 업무내용.startswith("<"):
+                            # 여러 줄 지원 및 URL 자동 링크 변환
+                            업무내용 = 업무내용.replace("\n", "<br>")
+                            업무내용 = re.sub(r'(https?://\S+)', r'<a href="\1" target="_blank">\1</a>', 업무내용)
+                        # '보기>' 텍스트에 링크 심기
+                        업무내용 = 업무내용.replace("링크", '<a href="URL">링크></a>')
+                        html_output.append(f'<td style="width: 85%; text-align: left; padding-left: 15px; font-size: 13px;">{업무내용}</td>')
+                        html_output.append("</tr>")
+                    
+                    html_output.append("</table>")
+                    
+                    # HTML 출력
+                    final_html = "\n".join(html_output)
+                    st.markdown(final_html, unsafe_allow_html=True)
+                else:
+                    st.info("조회된 데이터가 없습니다.")
+            
+            
             try:
-                # 엑셀 파일에서 연간일정 시트 읽기
-                schedule_df = pd.read_excel("임직원 기초 데이터.xlsx", sheet_name="연간일정")
-                
-                # NaN 값을 빈 문자열로 변환
-                schedule_df = schedule_df.fillna("")
-                
-                # 모든 열을 문자열로 변환하고 앞뒤 공백 제거
-                for col in schedule_df.columns:
-                    schedule_df[col] = schedule_df[col].astype(str).str.strip()
+                # 구글 시트 인증
+                scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+                credentials_dict = {
+                    "type": st.secrets["google_credentials"]["type"],
+                    "project_id": st.secrets["google_credentials"]["project_id"],
+                    "private_key_id": st.secrets["google_credentials"]["private_key_id"],
+                    "private_key": st.secrets["google_credentials"]["private_key"],
+                    "client_email": st.secrets["google_credentials"]["client_email"],
+                    "client_id": st.secrets["google_credentials"]["client_id"],
+                    "auth_uri": st.secrets["google_credentials"]["auth_uri"],
+                    "token_uri": st.secrets["google_credentials"]["token_uri"],
+                    "auth_provider_x509_cert_url": st.secrets["google_credentials"]["auth_provider_x509_cert_url"],
+                    "client_x509_cert_url": st.secrets["google_credentials"]["client_x509_cert_url"]
+                }
+                credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
+                gc = gspread.authorize(credentials)
 
-                # 스타일이 적용된 테이블 표시
-                st.markdown("""
-                <style>
-                .schedule-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: 0px 0;
-                    font-size: 12px; 
-                }
-                .schedule-table th, .schedule-table td {
-                    border: 1px solid #ddd;
-                    padding: 4px;
-                    text-align: center;
-                    min-width: 50px;
-                    color: #A6A6A6;
-                }
-                .schedule-table th {
-                    background-color: #F2F2F2;
-                    position: sticky;
-                    top: 0;
-                    z-index: 1;
-                    white-space: nowrap;
-                    color: #000000;
-                }
-                .schedule-table td {
-                    background-color: white;
-                }
-                .schedule-table tr:nth-child(even) td {
-                    background-color: #f8f9fa;
-                }
-                .schedule-table td:first-child {
-                    background-color: #F2F2F2;
-                    position: sticky;
-                    left: 0;
-                    z-index: 1;
-                }
-                .schedule-container {
-                    overflow-x: auto;
-                    margin-top: 0px;
-                    max-height: 800px;
-                    overflow-y: auto;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-
-                # HTML 테이블 생성
-                table_html = '<div class="schedule-container">'
-                table_html += '<div style="margin-bottom: 10px; font-weight: bold;">연간 주요일정</div>'
-                table_html += '<table class="schedule-table">'
+                try:
+                    # 업무보고 시트 ID
+                    sheet_id = st.secrets["google_sheets"]["work_report_id"]
+                    worksheet = gc.open_by_key(sheet_id).worksheet('주요일정')  # '업무보고' 시트 선택
+                    schedule_data = worksheet.get_all_values()
+                except Exception as e:
+                    st.error(f"시트 접근 중 오류 발생: {str(e)}")
+                    schedule_data = []
                 
-                # 헤더 행 추가
-                table_html += '<tr><th style="color: #000000; background-color: #F2F2F2;">구분</th>'
-                for col in schedule_df.columns[1:]:
-                    table_html += f'<th style="color: #000000; background-color: #F2F2F2;">{col}</th>'
-                table_html += '</tr>'
-                
-                # 데이터 행 추가
-                for _, row in schedule_df.iterrows():
-                    table_html += '<tr>'
+                # 데이터가 있는 경우에만 DataFrame 생성
+                if schedule_data:
+                    # 데이터프레임으로 변환
+                    schedule_df = pd.DataFrame(schedule_data[1:], columns=schedule_data[0])
+                    
+                    # NaN 값을 빈 문자열로 변환
+                    schedule_df = schedule_df.fillna("")
+                    
+                    # 모든 열을 문자열로 변환하고 앞뒤 공백 제거
                     for col in schedule_df.columns:
-                        cell_value = row[col]
-                        if col == schedule_df.columns[0]:  # 첫 번째 열(구분)
-                            table_html += f'<td style="background-color: #F2F2F2; text-align: center; color: #000000;">{cell_value}</td>'
-                        else:
-                            # 셀에 "진행" 또는 "계획" 텍스트가 있는 경우 배경색 변경
-                            if "진행" in str(cell_value).lower():
-                                table_html += f'<td style="background-color: #FFE5E5; text-align: center; color: #EE6C6C;">{cell_value}</td>'
-                            elif "계획" in str(cell_value).lower():
-                                table_html += f'<td style="background-color: #F2F2F2; text-align: center; color: #A6A6A6;">{cell_value}</td>'
-                            elif cell_value and cell_value != "":  # 그 외 텍스트가 있는 경우
-                                table_html += f'<td style="background-color: #FFE5E6; text-align: center; color: #EE6C6C;">{cell_value}</td>'
-                            else:
-                                table_html += f'<td style="text-align: center; color: #A6A6A6;">{cell_value}</td>'
-                    table_html += '</tr>'
-                
-                table_html += '</table></div>'
-                
-                # 테이블 표시
-                st.markdown(table_html, unsafe_allow_html=True)
+                        schedule_df[col] = schedule_df[col].astype(str).str.strip()
 
-                st.markdown("###### 수시/상시 일정")
-                
-                st.markdown("""
-                <div style="font-size: 12px;">
-                ㆍ채용 진행 : 정시(연간 인원계획)/수시/결원에 대한 채용 진행<br>                
-                ㆍ온보딩/수습평가 운영 : 온보딩 프로그램 / CEO 환영 미팅 / 3개월 후 수습평가 실시<br>                
-                ㆍ인력운영/관리 : 근태(휴가/초과근무/출퇴근) 관리, 조직개편 및 인사발령, 입퇴사 4대보험 처리<br>                
-                ㆍ복지제도 운영 : 경조비/경조휴가, 근속 포상(휴가, 상품) 지급<br>                
-                ㆍ사내 시스템 운영 : 뉴로웍스, 뉴로핏 커리어 콘텐츠 업데이트, MS/비즈박스 라이선스 관리 등<br>                
-                ㆍ교육 운영 : 직무 전문 교육, 특강 등 교육 지원, 각종 이러닝 콘텐츠 공유<br>                
-                ㆍ노무 이슈 가이드/조치 : 고충처리(동료간 어려움, 컴플레인 등) 상담, 규정/제도 가이드<br>                
-                ㆍ각종 대관 업무 : 노동부(실사/ 인원통계 /출산 및 육아 휴직), 병무청, 산학협력 등<br>
-                </div>
-                """, unsafe_allow_html=True)
+                    # 스타일이 적용된 테이블 표시
+                    st.markdown("""
+                    <style>
+                    .schedule-table {
+                        width: 90%;
+                        border-collapse: collapse;
+                        margin: 0px 0;
+                        font-size: 13px; 
+                    }
+                    .schedule-table th, .schedule-table td {
+                        border: 1px solid #ddd;
+                        padding: 6px;
+                        text-align: center;
+                        min-width: 50px;
+                        color: #A6A6A6;
+                    }
+                    .schedule-table th {
+                        background-color: #F2F2F2;
+                        position: sticky;
+                        top: 0;
+                        z-index: 1;
+                        white-space: nowrap;
+                        color: #000000;
+                    }
+                    .schedule-table td {
+                        background-color: white;
+                    }
+                    .schedule-table tr:nth-child(even) td {
+                        background-color: #f8f9fa;
+                    }
+                    .schedule-table td:first-child {
+                        background-color: #F2F2F2;
+                        position: sticky;
+                        left: 0;
+                        z-index: 1;
+                    }
+                    .schedule-container {
+                        overflow-x: auto;
+                        margin-top: 0px;
+                        max-height: 800px;
+                        overflow-y: auto;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+
+                    # HTML 테이블 생성
+                    table_html = '<div class="schedule-container">'
+                    table_html += '<div style="margin-bottom: 10px; font-weight: bold;">연간 주요일정</div>'
+                    table_html += '<table class="schedule-table">'
+                    
+                    # 헤더 행 추가
+                    table_html += '<tr><th style="color: #000000; background-color: #f0f2f6; font-weight: normal;">구분</th>'
+                    for col in schedule_df.columns[1:]:
+                        table_html += f'<th style="color: #000000; background-color: #f0f2f6; font-weight: normal;">{col}</th>'
+                    table_html += '</tr>'
+                    
+                    # 데이터 행 추가
+                    for _, row in schedule_df.iterrows():
+                        table_html += '<tr>'
+                        current_month = int(datetime.now().month)  # 현재 월을 정수형으로 가져오기
+                        for idx, col in enumerate(schedule_df.columns):
+                            cell_value = row[col]
+                            if idx == 0:  # 첫 번째 열(구분)
+                                table_html += f'<td style="background-color: #f0f2f6; text-align: center; color: #000000;">{cell_value}</td>'
+                            else:
+                                # 현재 월에 해당하는 열인지 확인 (1월은 첫 번째 열이므로 idx가 1)
+                                is_current_month = (idx == current_month)
+                                
+                                if is_current_month and cell_value and cell_value != "":
+                                    # 현재 월이고 내용이 있는 경우 빨간 배경과 흰색 글씨
+                                    table_html += f'<td style="background-color: #ff3333; text-align: center; color: #FFFFFF;">{cell_value}</td>'
+                                elif "진행" in str(cell_value).lower():
+                                    table_html += f'<td style="background-color: #FFE5E5; text-align: center; color: #EE6C6C;">{cell_value}</td>'
+                                elif "계획" in str(cell_value).lower():
+                                    table_html += f'<td style="background-color: #F2F2F2; text-align: center; color: #A6A6A6;">{cell_value}</td>'
+                                elif cell_value and cell_value != "":  # 그 외 텍스트가 있는 경우
+                                    table_html += f'<td style="background-color: #FFE5E6; text-align: center; color: #EE6C6C;">{cell_value}</td>'
+                                else:
+                                    table_html += f'<td style="text-align: center; color: #A6A6A6;">{cell_value}</td>'
+                        table_html += '</tr>'
+                    
+                    table_html += '</table></div>'
+                    
+                    # 테이블 표시
+                    st.markdown(table_html, unsafe_allow_html=True)
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    st.markdown("###### 수시/상시 일정")
+                    
+                    st.markdown("""
+                    <div style="font-size: 13px;">
+                    ㆍ채용 진행 : 정시(연간 인원계획)/수시/결원에 대한 채용 진행<br>                
+                    ㆍ온보딩/수습평가 운영 : 온보딩 프로그램 / CEO 환영 미팅 / 3개월 후 수습평가 실시<br>                
+                    ㆍ인력운영/관리 : 근태(휴가/초과근무/출퇴근) 관리, 조직개편 및 인사발령, 입퇴사 4대보험 처리<br>                
+                    ㆍ복지제도 운영 : 경조비/경조휴가, 근속 포상(휴가, 상품) 지급<br>                
+                    ㆍ사내 시스템 운영 : 뉴로웍스, 뉴로핏 커리어 콘텐츠 업데이트, MS/비즈박스 라이선스 관리 등<br>                
+                    ㆍ교육 운영 : 직무 전문 교육, 특강 등 교육 지원, 각종 이러닝 콘텐츠 공유<br>                
+                    ㆍ노무 이슈 가이드/조치 : 고충처리(동료간 어려움, 컴플레인 등) 상담, 규정/제도 가이드<br>                
+                    ㆍ각종 대관 업무 : 노동부(실사/ 인원통계 /출산 및 육아 휴직), 병무청, 산학협력 등<br>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"연간일정을 불러오는 중 오류가 발생했습니다: {str(e)}")
+            st.markdown("<br>", unsafe_allow_html=True)   
+            st.markdown("<br>", unsafe_allow_html=True)              
+            st.markdown('''
+            <a href="https://docs.google.com/spreadsheets/d/1KjlfACJIzNLerJQ38ti4VlPbJh3t5gDobpi-wr28zf8/edit?gid=0#gid=0" 
+            target="_blank" 
+            style="
+                text-decoration: none; 
+                color: #1b1b1e;
+                background-color: #f0f2f6;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 12px;
+                display: inline-block;
+                ">
+                🔗 업무보고 및 주요일정 DB
+            </a>
+            ''', unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}") 
