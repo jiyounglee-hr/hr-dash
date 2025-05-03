@@ -2329,7 +2329,7 @@ try:
                 }
                 .schedule-container {
                     overflow-x: auto;
-                    margin-top: 20px;
+                    margin-top: 0px;
                     max-height: 800px;
                     overflow-y: auto;
                 }
