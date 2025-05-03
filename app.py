@@ -2346,7 +2346,7 @@ try:
                 st.markdown("###### 업무 공유/보고")
                 
                 # 조회 조건 컬럼 생성
-                col1, col2, col3 = st.columns([0.3, 0.2, 0.5])
+                col1, col2, col3 = st.columns([0.2, 0.3, 0.5])
                 
                 with col1:
                     # 보고상태 선택
@@ -2356,6 +2356,7 @@ try:
                     # 선택된 보고상태에 해당하는 데이터만 필터링
                     status_filtered_df = report_df[report_df['보고상태'] == selected_status]
                     
+                with col2:
                     # 타입과 보고일을 합친 옵션 생성
                     type_date_options = ['전체']
                     for type_val in status_filtered_df['타입'].unique():
@@ -2364,9 +2365,6 @@ try:
                             type_date_options.append(f"{type_val} - {date}")
                     
                     selected_type_date = st.selectbox('타입 - 보고일', type_date_options)
-
-                with col2:
-                    st.write("")
 
                 with col3:
                     st.write("")
