@@ -2349,26 +2349,30 @@ try:
                 col1, col2, col3 = st.columns([0.3, 0.2, 0.5])
                 
                 with col1:
+                    # 보고상태 선택
+                    status_options = ['보고예정', '보고완료']
+                    selected_status = st.selectbox('보고상태', status_options)
+
+                    # 선택된 보고상태에 해당하는 데이터만 필터링
+                    status_filtered_df = report_df[report_df['보고상태'] == selected_status]
+                    
                     # 타입과 보고일을 합친 옵션 생성
                     type_date_options = ['전체']
-                    for type_val in report_df['타입'].unique():
-                        dates = report_df[report_df['타입'] == type_val]['보고일'].dt.strftime('%Y-%m-%d').unique()
+                    for type_val in status_filtered_df['타입'].unique():
+                        dates = status_filtered_df[status_filtered_df['타입'] == type_val]['보고일'].dt.strftime('%Y-%m-%d').unique()
                         for date in dates:
                             type_date_options.append(f"{type_val} - {date}")
                     
                     selected_type_date = st.selectbox('타입 - 보고일', type_date_options)
 
-
                 with col2:
-                    # 보고상태 선택
-                    status_options = ['보고예정', '보고완료']
-                    selected_status = st.selectbox('보고상태', status_options)
+                    st.write("")
 
                 with col3:
                     st.write("")
 
                 # 데이터 필터링
-                filtered_df = report_df.copy()
+                filtered_df = report_df[report_df['보고상태'] == selected_status]
                 
                 if selected_type_date != '전체':
                     type_val, date_val = selected_type_date.split(' - ')
@@ -2376,9 +2380,6 @@ try:
                         (filtered_df['타입'] == type_val) & 
                         (filtered_df['보고일'].dt.strftime('%Y-%m-%d') == date_val)
                     ]
-                
-                if selected_status != '전체':
-                    filtered_df = filtered_df[filtered_df['보고상태'] == selected_status]
 
                 # 데이터프레임 정렬
                 filtered_df = filtered_df.sort_values('보고일', ascending=False)
