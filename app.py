@@ -2743,7 +2743,7 @@ try:
                     else:
                         with st.spinner("PDF 병합 중..."):
                             try:
-                                merger = PdfMerger()
+                                merger = PdfMerger() 
                                 
                                 # 업로드된 파일들을 병합
                                 for uploaded_file in uploaded_files:
