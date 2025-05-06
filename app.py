@@ -27,6 +27,8 @@ import numpy as np
 from dateutil.relativedelta import relativedelta
 import pytz
 import gspread
+import tempfile
+from PyPDF2 import PdfMerger
 
 # 날짜 정규화 함수
 def normalize_date(date_str):
@@ -579,30 +581,28 @@ if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
     st.session_state.menu = "📈 연도별 인원 통계"
 if st.sidebar.button("🔔 인사팀 업무 공유", use_container_width=True):
     st.session_state.menu = "🔔 인사팀 업무 공유"
-if st.sidebar.button("🔍 임직원 검색", use_container_width=True):
-    st.session_state.menu = "🔍 임직원 검색"
 if st.sidebar.button("😊 임직원 명부", use_container_width=True):
     st.session_state.menu = "😊 임직원 명부"
+if st.sidebar.button("🔍 연락처/생일 검색", use_container_width=True):
+    st.session_state.menu = "🔍 연락처/생일 검색"
+
 
 st.sidebar.markdown("#### HR Surpport")
 # HR Support 섹션
+if st.sidebar.button("🚀 채용 전형관리", use_container_width=True):
+    st.session_state.menu = "🚀 채용 전형관리"
+if st.sidebar.button("📋 채용 처우협상", use_container_width=True):
+    st.session_state.menu = "📋 채용 처우협상"
 if st.sidebar.button("🏦 기관제출용 인원현황", use_container_width=True):
     st.session_state.menu = "🏦 기관제출용 인원현황"
-if st.sidebar.button("📋 채용_처우협상", use_container_width=True):
-    st.session_state.menu = "📋 채용_처우협상"
 if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
     st.session_state.menu = "⏰ 초과근무 조회"
 if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
     st.session_state.menu = "📅 인사발령 내역"
 
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
-with st.sidebar.expander("🚀 채용전형관리"):
-    st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️채용 전형 시스템</a>', unsafe_allow_html=True)
-    st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/~/+/?page=admin" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️면접 평가서 관리</a>', unsafe_allow_html=True)
-    st.markdown('<a href="https://docs.google.com/spreadsheets/d/1zwYJ2hwneCeSgd6p4s9ngll8PDmhLhq9qOTRo5SLCz8/edit?gid=0#gid=0" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️면접 평가서 DB</a>', unsafe_allow_html=True)
-    st.markdown('<a href="https://docs.google.com/spreadsheets/d/1SfVtvaHgXesDFtdFozt9CJD8aQpPBrK76AxNj-OOfFE/edit?gid=0#gid=0" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️평가기준 및 채용공고 DB</a>', unsafe_allow_html=True)
-
 with st.sidebar.expander("💡 전사지원"):
     st.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
 
@@ -1285,8 +1285,8 @@ try:
                 use_container_width=False
             )
 
-        elif menu == "🔍 임직원 검색":
-            st.markdown("##### 🔍 연락처 검색")
+        elif menu == "🔍 연락처/생일 검색":
+            st.markdown("##### 🔍 연연락처/생일 검색")
             
             # 검색 부분을 컬럼으로 나누기
             search_col, space_col = st.columns([0.3, 0.7])
@@ -1536,7 +1536,7 @@ try:
             else:
                 st.error("데이터를 불러오는 중 오류가 발생했습니다.")
 
-        elif menu == "📋 채용_처우협상":
+        elif menu == "📋 채용 처우협상":
             st.markdown("##### 🔎 처우 기본정보")
             
             # 직군 매핑 정의
@@ -2345,8 +2345,8 @@ try:
             if not report_df.empty:
                 st.markdown("###### 업무 공유/보고")
                 
-                # 조회 조건 컬럼 생성
-                col1, col2, col3 = st.columns([0.15, 0.3, 0.55])
+# 조회 조건 컬럼 생성
+                col1, col2, col3 = st.columns([0.15, 0.3, 0.55]) 
                 
                 with col1:
                     # 보고상태 선택
@@ -2364,7 +2364,7 @@ try:
                         for date in dates:
                             type_date_options.append(f"{type_val} - {date}")
                     
-                    selected_type_date = st.selectbox('타입 - 보고일', type_date_options)
+                    selected_type_date = st.selectbox('타입 - 보고일자', type_date_options)
 
                 with col3:
                     st.write("")
@@ -2409,10 +2409,7 @@ try:
                     st.markdown(final_html, unsafe_allow_html=True)
                 else:
                     st.info("조회된 데이터가 없습니다.")
-                st.markdown("""
-                    <div style="font-size: 13px;">                
-                    </div>
-                    """, unsafe_allow_html=True)
+            
             
             try:
                 # 구글 시트 인증
@@ -2573,6 +2570,202 @@ try:
                 🔗 업무보고 및 주요일정 DB
             </a>
             ''', unsafe_allow_html=True)
+
+        # 지원서 관리 메뉴
+        elif menu == "🚀 채용 전형관리":
+            st.markdown("##### 🚀 채용 전형관리")
+            st.markdown("<br>", unsafe_allow_html=True)
+            # CSS 스타일 정의
+            st.markdown("""
+                <style>
+                a {
+                    text-decoration: none !important;
+                }
+                .link-hover {
+                    color: #1b1b1e;
+                    font-size: 13px;
+                    transition: color 0.3s;
+                    display: block;
+                    margin: 0;
+                    padding: 0;
+                    line-height: 1;
+                }
+                .link-hover:hover {
+                    color: #0066ff !important;
+                    text-decoration: none !important;
+                }
+                .category-title {
+                    color: #1b1b1e;
+                    font-size: 14px;
+                    font-weight: 600;
+                    margin-top: 5px;
+                    margin-bottom: 2px;
+                    line-height: 1;
+                }
+                .link-container {
+                    margin-left: 10px;
+                    line-height: 1;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+            st.markdown("###### 📝 채용 관리 시스템")
+            
+            with st.expander("👇 링크 바로가기 "):
+                # 1. 지원자 접수
+                st.markdown('<div class="category-title">1️⃣ 채용공고 관리</div>', unsafe_allow_html=True)
+                st.markdown('<div class="link-container">', unsafe_allow_html=True)
+                st.markdown('<a href="https://www.notion.so/neurophethr/Career_ADMIN-74f617b482894f5ba7196833eeaed2ef" target="_blank" class="link-hover">▫️뉴로핏 커리어 공고 업데이트</a>', unsafe_allow_html=True)
+                st.markdown('<a href="https://app.oopy.io/home?utm_source=oopy&utm_medium=homepage" target="_blank" class="link-hover">▫️뉴로핏 커리어 웹호스팅(우피)</a>', unsafe_allow_html=True)
+                st.markdown('<a href="https://career.neurophet.com/" target="_blank" class="link-hover">▫️뉴로핏 커리어 </a>', unsafe_allow_html=True)
+                st.markdown('<a href="https://docs.google.com/spreadsheets/d/1SfVtvaHgXesDFtdFozt9CJD8aQpPBrK76AxNj-OOfFE/edit?gid=0#gid=0" target="_blank" class="link-hover">▫️평가기준 및 채용공고 DB</a>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                # 1. 지원자 접수
+                st.markdown('<div class="category-title">2️⃣ 지원자 접수</div>', unsafe_allow_html=True)
+                st.markdown('<div class="link-container">', unsafe_allow_html=True)
+                st.markdown('<a href="https://docs.google.com/spreadsheets/d/1o5tLJr-6NbYZiImU7IKBUTtjVaeU-HI_pNxNvvF2f5c/edit?gid=126612072#gid=126612072" target="_blank" class="link-hover">▫️구글 지원자 DB</a>', unsafe_allow_html=True)
+                st.markdown('<a href="https://neurophet.sharepoint.com/sites/HR2/SitePages/%EC%B1%84%EC%9A%A9-%EC%A0%84%ED%98%95%EA%B4%80%EB%A6%AC.aspx" target="_blank" class="link-hover">▫️지원자 정보 업데이트</a>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                # 2. 면접 전형
+                st.markdown('<div class="category-title">3️⃣ 면접 전형</div>', unsafe_allow_html=True)
+                st.markdown('<div class="link-container">', unsafe_allow_html=True)
+                st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app" target="_blank" class="link-hover">▫️채용 가이드 및 AI분석</a>', unsafe_allow_html=True)
+                st.markdown('<a href="https://hr-resume-uzu5bngyefgcv5ykngnhcd.streamlit.app/~/+/?page=admin" target="_blank" class="link-hover">▫️면접평가서 조회 및 PDF 다운로드</a>', unsafe_allow_html=True)
+                st.markdown('<a href="https://docs.google.com/spreadsheets/d/1zwYJ2hwneCeSgd6p4s9ngll8PDmhLhq9qOTRo5SLCz8/edit?gid=0#gid=0" target="_blank" class="link-hover">▫️면접평가서 DB</a>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # PDF 병합 기능
+            st.markdown("###### 📑이력서 PDF 병합")
+            
+            
+            
+            tab1, tab2 = st.tabs(["구글 드라이브 링크로 병합", "파일 업로드로 병합"])
+            
+            with tab1:
+                # 1. 파일 ID 추출 함수
+                def extract_file_id(link):
+                    try:
+                        return link.split("/d/")[1].split("/")[0]
+                    except:
+                        return None
+
+                # 2. 다운로드 함수
+                def download_pdf_from_drive(file_id, save_path):
+                    try:
+                        url = f"https://drive.google.com/uc?export=download&id={file_id}"
+                        response = requests.get(url, allow_redirects=True)
+                        
+                        # PDF 여부 확인
+                        if response.status_code == 200 and b"%PDF" in response.content[:1024]:
+                            with open(save_path, "wb") as f:
+                                f.write(response.content)
+                            return True
+                        else:
+                            st.error(f"PDF 파일이 아니거나 다운로드 실패: {url}")
+                            return False
+                    except Exception as e:
+                        st.error(f"파일 다운로드 중 오류 발생: {str(e)}")
+                        return False
+
+                # 3. PDF 병합 UI
+                links = st.text_area("Google Drive PDF 링크를 '링크가있는 모든 사용자'로 공유하고, 한 줄에 하나씩 입력해주세요.", height=100)
+
+                if st.button("구글 드라이브 PDF 병합"):
+                    link_list = [l.strip() for l in links.splitlines() if l.strip()]
+                    if not link_list:
+                        st.warning("PDF 링크를 입력해주세요.")
+                    else:
+                        with st.spinner("PDF 병합 중..."):
+                            # Windows 환경에서 임시 디렉토리 생성
+                            temp_dir = os.path.join(tempfile.gettempdir(), 'pdf_merge_temp')
+                            os.makedirs(temp_dir, exist_ok=True)
+                            
+                            try:
+                                merger = PdfMerger()
+                                download_success = False
+                                
+                                for i, link in enumerate(link_list):
+                                    file_id = extract_file_id(link)
+                                    if not file_id:
+                                        st.error(f"링크 오류: {link}")
+                                        continue
+                                    
+                                    # Windows 경로 형식으로 PDF 파일 경로 생성
+                                    pdf_path = os.path.join(temp_dir, f'file_{i}.pdf')
+                                    
+                                    # 다운로드 시도
+                                    if download_pdf_from_drive(file_id, pdf_path):
+                                        merger.append(pdf_path)
+                                        download_success = True
+                                    else:
+                                        st.error(f"{link} 다운로드에 실패했습니다.")
+                                
+                                if download_success:
+                                    try:
+                                        # 병합된 PDF 저장
+                                        output_path = os.path.join(temp_dir, 'merged_result.pdf')
+                                        merger.write(output_path)
+                                        merger.close()
+
+                                        # 파일이 실제로 생성되었는지 확인
+                                        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                                            with open(output_path, "rb") as f:
+                                                st.download_button(
+                                                    label="📥 병합된 PDF 다운로드",
+                                                    data=f,
+                                                    file_name="merged_result.pdf",
+                                                    mime="application/pdf"
+                                                )
+                                        else:
+                                            st.error("PDF 병합 파일 생성에 실패했습니다.")
+                                    except Exception as e:
+                                        st.error(f"PDF 병합 중 오류 발생: {str(e)}")
+                                else:
+                                    st.error("다운로드에 성공한 PDF 파일이 없습니다.")
+                            finally:
+                                # 임시 파일들 정리
+                                try:
+                                    import shutil
+                                    if os.path.exists(temp_dir):
+                                        shutil.rmtree(temp_dir)
+                                except Exception as e:
+                                    st.warning(f"임시 파일 정리 중 오류 발생: {str(e)}")
+            
+            with tab2:
+                uploaded_files = st.file_uploader("PDF 파일들을 선택하세요", type=['pdf'], accept_multiple_files=True)
+                
+                if st.button("업로드한 PDF 병합") and uploaded_files:
+                    if len(uploaded_files) < 2:
+                        st.warning("최소 2개 이상의 PDF 파일을 선택해주세요.")
+                    else:
+                        with st.spinner("PDF 병합 중..."):
+                            try:
+                                merger = PdfMerger()
+                                
+                                # 업로드된 파일들을 병합
+                                for uploaded_file in uploaded_files:
+                                    merger.append(uploaded_file)
+                                
+                                # 병합된 PDF를 메모리에 저장
+                                merged_pdf = BytesIO()
+                                merger.write(merged_pdf)
+                                merger.close()
+                                
+                                # 다운로드 버튼 생성
+                                st.download_button(
+                                    label="📥 병합된 PDF 다운로드",
+                                    data=merged_pdf.getvalue(),
+                                    file_name="merged_result.pdf",
+                                    mime="application/pdf"
+                                )
+                                
+                            except Exception as e:
+                                st.error(f"PDF 병합 중 오류가 발생했습니다: {str(e)}")
+                elif not uploaded_files:
+                    st.info("PDF 파일을 선택해주세요.")
 
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}") 
