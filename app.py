@@ -2315,16 +2315,28 @@ try:
                         # 업무보고 시트 ID
                         sheet_id = st.secrets["google_sheets"]["work_report_id"]
                         worksheet = gc.open_by_key(sheet_id).worksheet('시트1')  # '업무보고' 시트 선택
-                    except Exception as e:
-                        st.error(f"시트 접근 중 오류 발생: {str(e)}")
-                        return pd.DataFrame()
-                    
-                    try:
-                        # 데이터 가져오기
-                        data = worksheet.get_all_records()
+                        
+                        # 데이터와 하이퍼링크 정보 모두 가져오기
+                        data = worksheet.get_all_values()
+                        hyperlinks = worksheet.get_all_hyperlinks()
                         
                         # 데이터프레임으로 변환
-                        df = pd.DataFrame(data)
+                        df = pd.DataFrame(data[1:], columns=data[0])  # 첫 번째 행을 헤더로 사용
+                        
+                        # 하이퍼링크 정보를 딕셔너리로 변환
+                        hyperlink_dict = {}
+                        for link in hyperlinks:
+                            cell = link.address  # 예: 'B2'
+                            hyperlink_dict[cell] = link.hyperlink
+                        
+                        # 업무내용 컬럼의 하이퍼링크 처리
+                        if '업무내용' in df.columns:
+                            for idx, row in df.iterrows():
+                                cell_address = f'B{idx + 2}'  # 데이터는 2번째 행부터 시작
+                                if cell_address in hyperlink_dict:
+                                    original_text = row['업무내용']
+                                    if '링크' in original_text:
+                                        df.at[idx, '업무내용'] = original_text.replace('링크', f'<a href="{hyperlink_dict[cell_address]}" target="_blank">링크</a>')
                         
                         # 보고일 컬럼을 datetime으로 변환
                         if '보고일' in df.columns:
@@ -2394,11 +2406,8 @@ try:
                         # HTML로 입력된 경우 그대로 사용
                         업무내용 = row["업무내용"]
                         if not 업무내용.startswith("<"):
-                            # 여러 줄 지원 및 URL 자동 링크 변환
+                            # HTML이 아닌 경우에만 줄바꿈 처리
                             업무내용 = 업무내용.replace("\n", "<br>")
-                            업무내용 = re.sub(r'(https?://\S+)', r'<a href="\1" target="_blank">\1</a>', 업무내용)
-                        # '보기>' 텍스트에 링크 심기
-                        업무내용 = 업무내용.replace("링크", '<a href="URL">링크></a>')
                         html_output.append(f'<td style="width: 85%; text-align: left; padding-left: 15px; font-size: 13px;">{업무내용}</td>')
                         html_output.append("</tr>")
                     
