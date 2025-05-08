@@ -2315,32 +2315,16 @@ try:
                         # 업무보고 시트 ID
                         sheet_id = st.secrets["google_sheets"]["work_report_id"]
                         worksheet = gc.open_by_key(sheet_id).worksheet('시트1')  # '업무보고' 시트 선택
-                        
+                    except Exception as e:
+                        st.error(f"시트 접근 중 오류 발생: {str(e)}")
+                        return pd.DataFrame()
+                    
+                    try:
                         # 데이터 가져오기
-                        data = worksheet.get_all_values()
+                        data = worksheet.get_all_records()
                         
                         # 데이터프레임으로 변환
-                        df = pd.DataFrame(data[1:], columns=data[0])  # 첫 번째 행을 헤더로 사용
-                        
-                        # 업무내용 컬럼의 하이퍼링크 처리
-                        if '업무내용' in df.columns:
-                            # Google Sheets API를 통해 서식 정보 가져오기
-                            sheet = gc.open_by_key(sheet_id).sheet1
-                            sheet_metadata = sheet.spreadsheet.fetch_sheet_metadata()
-                            grid_data = sheet_metadata['sheets'][0]['data'][0]['rowData']
-                            
-                            # 업무내용 컬럼의 인덱스 찾기
-                            content_col_idx = df.columns.get_loc('업무내용')
-                            
-                            # 각 행의 하이퍼링크 정보 처리
-                            for idx, row_data in enumerate(grid_data[1:]):  # 헤더 제외
-                                if 'values' in row_data and len(row_data['values']) > content_col_idx:
-                                    cell = row_data['values'][content_col_idx]
-                                    if 'hyperlink' in cell:
-                                        url = cell['hyperlink']
-                                        original_text = df.iloc[idx]['업무내용']
-                                        if '링크' in original_text:
-                                            df.iloc[idx, content_col_idx] = original_text.replace('링크', f'<a href="{url}" target="_blank">링크</a>')
+                        df = pd.DataFrame(data)
                         
                         # 보고일 컬럼을 datetime으로 변환
                         if '보고일' in df.columns:
@@ -2410,12 +2394,15 @@ try:
                         # HTML로 입력된 경우 그대로 사용
                         업무내용 = row["업무내용"]
                         if not 업무내용.startswith("<"):
-                            # HTML이 아닌 경우에만 줄바꿈 처리
+                            # 여러 줄 지원 및 URL 자동 링크 변환
                             업무내용 = 업무내용.replace("\n", "<br>")
+                            업무내용 = re.sub(r'(https?://\S+)', r'<a href="\1" target="_blank">\1</a>', 업무내용)
+                        # '보기>' 텍스트에 링크 심기
+                        업무내용 = 업무내용.replace("링크", '<a href="URL">링크></a>')
                         html_output.append(f'<td style="width: 85%; text-align: left; padding-left: 15px; font-size: 13px;">{업무내용}</td>')
                         html_output.append("</tr>")
                     
-                    html_output.append("</table>") 
+                    html_output.append("</table>")
                     
                     # HTML 출력
                     final_html = "\n".join(html_output)
