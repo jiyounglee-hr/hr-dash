@@ -2343,7 +2343,7 @@ try:
             report_df = get_work_report_data()
             st.markdown("<br>", unsafe_allow_html=True)
             if not report_df.empty:
-                st.markdown("###### 업무 공유/보고1")
+                st.markdown("###### 업무 공유/보고")
                 
 # 조회 조건 컬럼 생성
                 col1, col2, col3 = st.columns([0.15, 0.3, 0.55]) 
@@ -2393,19 +2393,14 @@ try:
                         # 업무내용
                         # HTML로 입력된 경우 그대로 사용
                         업무내용 = row["업무내용"]
-                        if not 업무내용.strip().startswith("<"):
+                        if not 업무내용.startswith("<"):
                             # 여러 줄 지원 및 URL 자동 링크 변환
                             업무내용 = 업무내용.replace("\n", "<br>")
-                            # '링크: http...' 패턴 → 하이퍼링크
-                            업무내용 = re.sub(r'링크[:\\s]*((https?://\\S+))', r'<a href="\\1" target="_blank">링크</a>', 업무내용)
-                            # '링크(http...)' 패턴 → 하이퍼링크
-                            업무내용 = re.sub(r'링크\\((https?://\\S+)\\)', r'<a href="\\1" target="_blank">링크</a>', 업무내용)
-                            # 일반 URL 자동 링크 변환
-                            업무내용 = re.sub(r'(?<!href=")(https?://\\S+)', r'<a href="\\1" target="_blank">\\1</a>', 업무내용)
-                        # '링크' 텍스트에 하이퍼링크 추가 (URL이 있는 경우)
-                        업무내용 = re.sub(r'링크\((https?://\S+)\)', r'<a href="\1" target="_blank">링크>>></a>', 업무내용)
+                            업무내용 = re.sub(r'(https?://\S+)', r'<a href="\1" target="_blank">\1</a>', 업무내용)
+                        # '보기>' 텍스트에 링크 심기
+                        업무내용 = 업무내용.replace("링크", '<a href="URL">링크></a>')
                         html_output.append(f'<td style="width: 85%; text-align: left; padding-left: 15px; font-size: 13px;">{업무내용}</td>')
-                        html_output.append("</tr>") 
+                        html_output.append("</tr>")
                     
                     html_output.append("</table>") 
                     
