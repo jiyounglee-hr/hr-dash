@@ -2393,13 +2393,15 @@ try:
                         # 업무내용
                         # HTML로 입력된 경우 그대로 사용
                         업무내용 = row["업무내용"]
-                        if not 업무내용.startswith("<"):
+                        if not 업무내용.strip().startswith("<"):
                             # 여러 줄 지원 및 URL 자동 링크 변환
                             업무내용 = 업무내용.replace("\n", "<br>")
-                            # URL 자동 링크 변환 (http 또는 https로 시작하는 모든 URL)
-                            업무내용 = re.sub(r'(https?://\S+)', r'<a href="\1" target="_blank">\1</a>', 업무내용)
-                            # '링크' 텍스트를 실제 URL로 변환
-                            업무내용 = re.sub(r'링크: (https?://\S+)', r'<a href="\1" target="_blank">링크</a>', 업무내용)
+                            # '링크: http...' 패턴 → 하이퍼링크
+                            업무내용 = re.sub(r'링크[:\\s]*((https?://\\S+))', r'<a href="\\1" target="_blank">링크</a>', 업무내용)
+                            # '링크(http...)' 패턴 → 하이퍼링크
+                            업무내용 = re.sub(r'링크\\((https?://\\S+)\\)', r'<a href="\\1" target="_blank">링크</a>', 업무내용)
+                            # 일반 URL 자동 링크 변환
+                            업무내용 = re.sub(r'(?<!href=")(https?://\\S+)', r'<a href="\\1" target="_blank">\\1</a>', 업무내용)
                         # '링크' 텍스트에 하이퍼링크 추가 (URL이 있는 경우)
                         업무내용 = re.sub(r'링크\((https?://\S+)\)', r'<a href="\1" target="_blank">링크</a>', 업무내용)
                         html_output.append(f'<td style="width: 85%; text-align: left; padding-left: 15px; font-size: 13px;">{업무내용}</td>')
