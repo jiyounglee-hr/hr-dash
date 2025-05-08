@@ -2343,7 +2343,7 @@ try:
             report_df = get_work_report_data()
             st.markdown("<br>", unsafe_allow_html=True)
             if not report_df.empty:
-                st.markdown("###### 업무 공유/보고")
+                st.markdown("###### 업무 공유/보고1")
                 
 # 조회 조건 컬럼 생성
                 col1, col2, col3 = st.columns([0.15, 0.3, 0.55]) 
