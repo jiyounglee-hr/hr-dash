@@ -2322,20 +2322,37 @@ try:
                         # 데이터프레임으로 변환
                         df = pd.DataFrame(data[1:], columns=data[0])  # 첫 번째 행을 헤더로 사용
                         
+                        # 디버깅을 위한 정보 출력
+                        st.write("### 디버깅 정보")
+                        st.write("데이터프레임 컬럼:", df.columns.tolist())
+                        
                         # 업무내용 컬럼의 하이퍼링크 처리
                         if '업무내용' in df.columns:
+                            st.write("업무내용 컬럼 찾음")
                             # 각 셀의 하이퍼링크 정보 가져오기
                             for idx, row in df.iterrows():
                                 cell = worksheet.acell(f'B{idx + 2}')  # B열은 업무내용 컬럼
-                                if '=HYPERLINK' in str(cell.value):
+                                st.write(f"\n행 {idx + 2} 셀 값:", cell.value)
+                                st.write(f"행 {idx + 2} 셀 타입:", type(cell.value))
+                                
+                                if cell.value and '=HYPERLINK' in str(cell.value):
+                                    st.write(f"행 {idx + 2}에서 HYPERLINK 함수 발견")
                                     # HYPERLINK 함수에서 URL과 텍스트 추출
                                     import re
                                     match = re.search(r'=HYPERLINK\("([^"]+)"', cell.value)
                                     if match:
                                         url = match.group(1)
                                         original_text = row['업무내용']
+                                        st.write(f"추출된 URL: {url}")
+                                        st.write(f"원본 텍스트: {original_text}")
                                         if '링크' in original_text:
-                                            df.at[idx, '업무내용'] = original_text.replace('링크', f'<a href="{url}" target="_blank">링크</a>')
+                                            new_text = original_text.replace('링크', f'<a href="{url}" target="_blank">링크</a>')
+                                            st.write(f"변환된 텍스트: {new_text}")
+                                            df.at[idx, '업무내용'] = new_text
+                                else:
+                                    st.write(f"행 {idx + 2}에서 HYPERLINK 함수 없음")
+                        else:
+                            st.write("업무내용 컬럼을 찾을 수 없음")
                         
                         # 보고일 컬럼을 datetime으로 변환
                         if '보고일' in df.columns:
