@@ -2399,6 +2399,8 @@ try:
                             업무내용 = re.sub(r'(https?://\S+)', r'<a href="\1" target="_blank">\1</a>', 업무내용)
                         # '보기>' 텍스트에 링크 심기
                         업무내용 = 업무내용.replace("링크", '<a href="URL">링크></a>')
+                        # 디버깅: 변환된 업무내용 HTML 코드 출력
+                        st.code(업무내용, language="html")
                         html_output.append(f'<td style="width: 85%; text-align: left; padding-left: 15px; font-size: 13px;">{업무내용}</td>')
                         html_output.append("</tr>")
                     
