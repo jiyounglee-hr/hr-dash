@@ -2292,7 +2292,7 @@ try:
         elif menu == "🔔 인사팀 업무 공유":
             st.markdown("##### 🔔 인사팀 업무 공유")
             # 업무보고 데이터 가져오기
-            @st.cache_data(ttl=60)  # 5분마다 캐시 갱신
+            @st.cache_data(ttl=60)  # 1분마다 캐시 갱신
             def get_work_report_data():
                 try:
                     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -2316,27 +2316,26 @@ try:
                         sheet_id = st.secrets["google_sheets"]["work_report_id"]
                         worksheet = gc.open_by_key(sheet_id).worksheet('시트1')  # '업무보고' 시트 선택
                         
-                        # 데이터와 하이퍼링크 정보 모두 가져오기
+                        # 데이터 가져오기
                         data = worksheet.get_all_values()
-                        hyperlinks = worksheet.get_all_hyperlinks()
                         
                         # 데이터프레임으로 변환
                         df = pd.DataFrame(data[1:], columns=data[0])  # 첫 번째 행을 헤더로 사용
                         
-                        # 하이퍼링크 정보를 딕셔너리로 변환
-                        hyperlink_dict = {}
-                        for link in hyperlinks:
-                            cell = link.address  # 예: 'B2'
-                            hyperlink_dict[cell] = link.hyperlink
-                        
                         # 업무내용 컬럼의 하이퍼링크 처리
                         if '업무내용' in df.columns:
+                            # 각 셀의 하이퍼링크 정보 가져오기
                             for idx, row in df.iterrows():
-                                cell_address = f'B{idx + 2}'  # 데이터는 2번째 행부터 시작
-                                if cell_address in hyperlink_dict:
-                                    original_text = row['업무내용']
-                                    if '링크' in original_text:
-                                        df.at[idx, '업무내용'] = original_text.replace('링크', f'<a href="{hyperlink_dict[cell_address]}" target="_blank">링크</a>')
+                                cell = worksheet.acell(f'B{idx + 2}')  # B열은 업무내용 컬럼
+                                if '=HYPERLINK' in str(cell.value):
+                                    # HYPERLINK 함수에서 URL과 텍스트 추출
+                                    import re
+                                    match = re.search(r'=HYPERLINK\("([^"]+)"', cell.value)
+                                    if match:
+                                        url = match.group(1)
+                                        original_text = row['업무내용']
+                                        if '링크' in original_text:
+                                            df.at[idx, '업무내용'] = original_text.replace('링크', f'<a href="{url}" target="_blank">링크</a>')
                         
                         # 보고일 컬럼을 datetime으로 변환
                         if '보고일' in df.columns:
