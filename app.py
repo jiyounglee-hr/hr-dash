@@ -2491,7 +2491,7 @@ try:
                         background-color: white;
                     }
                     .schedule-table tr:nth-child(even) td {
-                        background-color: #ffffff;
+                        background-color: #ffffff; 
                     }
                     .schedule-table td:first-child {
                         background-color: #F2F2F2;
