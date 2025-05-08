@@ -2403,11 +2403,11 @@ try:
                             # 일반 URL 자동 링크 변환
                             업무내용 = re.sub(r'(?<!href=")(https?://\\S+)', r'<a href="\\1" target="_blank">\\1</a>', 업무내용)
                         # '링크' 텍스트에 하이퍼링크 추가 (URL이 있는 경우)
-                        업무내용 = re.sub(r'링크\((https?://\S+)\)', r'<a href="\1" target="_blank">링크</a>', 업무내용)
+                        업무내용 = re.sub(r'링크\((https?://\S+)\)', r'<a href="\1" target="_blank">링크>>></a>', 업무내용)
                         html_output.append(f'<td style="width: 85%; text-align: left; padding-left: 15px; font-size: 13px;">{업무내용}</td>')
-                        html_output.append("</tr>")
+                        html_output.append("</tr>") 
                     
-                    html_output.append("</table>")
+                    html_output.append("</table>") 
                     
                     # HTML 출력
                     final_html = "\n".join(html_output)
