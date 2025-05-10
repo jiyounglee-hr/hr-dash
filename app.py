@@ -3211,7 +3211,7 @@ try:
                     # 차트 표시
                     st.plotly_chart(fig_result, use_container_width=True)
                 
-            else:
+            else: 
                 st.warning("지원자 통계 데이터를 불러올 수 없습니다.")
  
 except Exception as e: 
