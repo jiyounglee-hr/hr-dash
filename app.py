@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import io
 from io import BytesIO
 import base64
@@ -579,6 +579,8 @@ if st.sidebar.button("📊 인원현황", use_container_width=True):
     st.session_state.menu = "📊 인원현황"
 if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
     st.session_state.menu = "📈 연도별 인원 통계"
+if st.sidebar.button("🚀 채용현황", use_container_width=True):
+    st.session_state.menu = "🚀 채용현황"
 if st.sidebar.button("🔔 인사팀 업무 공유", use_container_width=True):
     st.session_state.menu = "🔔 인사팀 업무 공유"
 if st.sidebar.button("😊 임직원 명부", use_container_width=True):
@@ -2765,7 +2767,7 @@ try:
                                 # 병합된 PDF를 메모리에 저장
                                 merged_pdf = BytesIO()
                                 merger.write(merged_pdf)
-                                merger.close()
+                                merger.close() 
                                 
                                 # 다운로드 버튼 생성
                                 st.download_button(
@@ -2780,5 +2782,437 @@ try:
                 elif not uploaded_files:
                     st.info("PDF 파일을 선택해주세요.")
 
-except Exception as e:
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}") 
+        # 채용현황 메뉴
+        elif menu == "🚀 채용현황":
+            st.markdown("##### 🚀 채용현황")
+            
+            # 채용현황 데이터 로드
+            @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+            def load_recruitment_data():
+                try:
+                    # 현재 디렉토리에서 엑셀 파일 경로 설정
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    
+                    # 엑셀 파일에서 "채용-공고현황" 시트 읽기 
+                    df = pd.read_excel(file_path, sheet_name="채용-공고현황")
+                    
+                    # 채용진행년도를 문자열로 변환
+                    if '채용진행년도' in df.columns:
+                        df['채용진행년도'] = df['채용진행년도'].astype(str)
+                        # 빈 문자열이나 'nan'은 제외
+                        df = df[df['채용진행년도'].str.strip() != '']
+                        df = df[df['채용진행년도'] != 'nan']
+                    
+                    # TO와 확정 컬럼을 숫자로 변환
+                    if 'TO' in df.columns:
+                        df['TO'] = pd.to_numeric(df['TO'], errors='coerce').fillna(0).astype(int)
+                    if '확정' in df.columns:
+                        df['확정'] = pd.to_numeric(df['확정'], errors='coerce').fillna(0).astype(int)
+                    
+                    # 날짜 컬럼 변환 시도
+                    if '공고게시일자' in df.columns:
+                        # 원본 값 보존
+                        df['공고게시일자_원본'] = df['공고게시일자'].astype(str)
+                        # 날짜 변환 시도
+                        df['공고게시일자'] = pd.to_datetime(df['공고게시일자'], errors='coerce')
+                        # 변환 실패한 경우 원본 값으로 복원
+                        df.loc[df['공고게시일자'].isna(), '공고게시일자'] = df.loc[df['공고게시일자'].isna(), '공고게시일자_원본']
+                        # 임시 컬럼 삭제
+                        df = df.drop('공고게시일자_원본', axis=1)
+                    
+                    return df
+                except Exception as e:
+                    st.error(f"채용현황 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+                    return None
+
+            # 데이터 로드
+            recruitment_df = load_recruitment_data()     
+            if recruitment_df is not None:
+                # 조회 조건 설정
+                col1, col2, col3 = st.columns([0.2, 0.2, 0.6])
+                
+                with col1:
+                    # 채용진행년도 선택 (문자열 처리, '0' 제외)
+                    years = sorted([year for year in recruitment_df['채용진행년도'].unique() 
+                                  if year not in ['0', 'nan', ''] and year.strip()], reverse=True)
+                    if not years:
+                        st.error("유효한 채용진행년도 데이터가 없습니다.")
+                    selected_year = st.selectbox("채용진행년도", years if years else [str(datetime.now().year)])
+                
+                with col2:
+                    # 채용상태 선택 ('0' 제외)
+                    statuses = ['전체'] + sorted([str(status) for status in recruitment_df['채용상태'].unique() 
+                                                if pd.notna(status) and str(status) not in ['0', 'nan', ''] and str(status).strip()])
+                    selected_status = st.selectbox("채용상태", statuses)
+                
+                with col3:
+                    # 여백 컬럼
+                    st.empty()
+
+                # 데이터 필터링 (문자열 비교)
+                filtered_df = recruitment_df[recruitment_df['채용진행년도'] == selected_year]
+                if selected_status != '전체':
+                    filtered_df = filtered_df[filtered_df['채용상태'].astype(str) == selected_status]
+
+                # 통계 계산
+                stats_df = filtered_df.groupby('본부').agg({
+                    'TO': 'sum',
+                    '확정': 'sum',
+                    '채용상태': lambda x: ', '.join(sorted(set(x)))  # 중복 제거하고 정렬하여 표시
+                }).reset_index()
+
+                # 본부명 기준으로 내림차순 정렬
+                stats_df = stats_df.sort_values('본부', ascending=False)
+
+                # 합계 행 추가
+                total_row = pd.DataFrame({
+                    '본부': ['합계'],
+                    'TO': [stats_df['TO'].sum()],
+                    '확정': [stats_df['확정'].sum()],
+                    '채용상태': ['']  # 합계 행의 채용상태는 빈 값으로
+                })
+                stats_df = pd.concat([stats_df, total_row])
+
+                # 통계 표시
+                col_stats1, col_stats2, col3 = st.columns([0.4, 0.4, 0.2]) 
+                
+                with col_stats1:
+                    st.dataframe(
+                        stats_df,
+                        column_config={
+                            "본부": st.column_config.TextColumn("본부", width=150),
+                            "TO": st.column_config.NumberColumn("TO", width=80),
+                            "확정": st.column_config.NumberColumn("확정", width=80),
+                            "채용상태": st.column_config.TextColumn("채용상태", width=200)
+                        },
+                        hide_index=True
+                    )
+                
+                with col_stats2:
+                    # 본부별 TO 차트
+                    # 합계 행 제외하고 본부별 TO 데이터 준비
+                    dept_to_df = stats_df[stats_df['본부'] != '합계'].copy()
+                    # 본부명 기준으로 내림차순 정렬
+                    dept_to_df = dept_to_df.sort_values('본부', ascending=False)
+                    
+                    # 수평 막대 차트 생성
+                    fig_to = px.bar(
+                        dept_to_df,
+                        y='본부',
+                        x='TO',
+                        orientation='h',
+                        title=""  # 제목 제거
+                    )
+                    
+                    # 차트 스타일 설정
+                    fig_to.update_traces(
+                        marker_color='#FF4B4B',
+                        text=dept_to_df['TO'],
+                        textposition='outside'
+                    )
+                    
+                    fig_to.update_layout(
+                        height=280,
+                        showlegend=False,
+                        margin=dict(t=30, r=20, l=20),  # 상단 여백
+                        xaxis_title="",
+                        yaxis_title="",
+                        yaxis=dict(autorange="reversed")  # 위에서 아래로 정렬
+                    )
+                    
+                    # 차트 표시
+                    st.plotly_chart(fig_to, use_container_width=True)
+                
+                with col3:
+                    # 여백 컬럼
+                    st.empty()
+                # 상세 리스트 표시
+                st.markdown("###### 📋 채용 포지션 리스트")
+                
+                # 데이터프레임 인덱스 재설정 (1부터 시작)
+                filtered_df = filtered_df.reset_index(drop=True)
+                filtered_df.index = filtered_df.index + 1
+                
+                # 표시할 컬럼 선택 및 정렬
+                display_df = filtered_df[['본부', '부서', '포지션명', 'TO', '확정', '채용상태', '공고게시일자', '채용진행년도']]
+                
+                st.dataframe(
+                    display_df,
+                    column_config={
+                        "본부": st.column_config.TextColumn("본부", width=120),
+                        "부서": st.column_config.TextColumn("부서", width=120),
+                        "포지션명": st.column_config.TextColumn("포지션명", width=200),
+                        "TO": st.column_config.NumberColumn("TO", width=50),
+                        "확정": st.column_config.NumberColumn("확정", width=50),
+                        "채용상태": st.column_config.TextColumn("채용상태", width=100),
+                        "공고게시일자": st.column_config.DateColumn(
+                            "공고게시일자",
+                            width=120,
+                            format="YYYY-MM-DD"
+                        ),
+                        "채용진행년도": st.column_config.NumberColumn("채용진행년도", width=100)
+                    },
+                    hide_index=False
+                )
+            else:
+                st.warning("채용현황 데이터를 불러올 수 없습니다.")
+                
+            st.markdown("---")
+            st.markdown("##### 👥 면접자 현황")
+            
+            # 면접 현황 데이터 로드
+            @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+            def load_interview_data():
+                try:
+                    # 현재 디렉토리에서 엑셀 파일 경로 설정
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    
+                    # 엑셀 파일에서 "채용-면접" 시트 읽기
+                    df = pd.read_excel(file_path, sheet_name="채용-면접")
+                    
+                    # 면접일자가 비어있는 행 제거
+                    df = df.dropna(subset=['면접일자'])
+                    
+                    # 성명이 0인 행 제거
+                    df = df[df['성명'] != 0]
+                    df = df[df['성명'] != '0']
+                    
+                    # 면접일자를 datetime으로 변환
+                    def convert_to_datetime(x):
+                        try:
+                            if pd.isna(x):
+                                return None
+                            elif isinstance(x, (datetime, pd.Timestamp)):
+                                return x
+                            elif isinstance(x, date):
+                                return datetime.combine(x, time())
+                            elif isinstance(x, time):
+                                return datetime.combine(datetime.now().date(), x)
+                            elif isinstance(x, str):
+                                return pd.to_datetime(x)
+                            elif isinstance(x, (int, float)):
+                                # 엑셀 날짜 숫자 처리
+                                return pd.Timestamp('1899-12-30') + pd.Timedelta(days=int(x))
+                            else:
+                                return None
+                        except:
+                            return None
+
+                    df['면접일자'] = df['면접일자'].apply(convert_to_datetime)
+                    
+                    # 변환 실패한 데이터 제거
+                    df = df.dropna(subset=['면접일자'])
+                    
+                    return df
+                except Exception as e:
+                    st.error(f"면접 현황 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+                    return None
+
+            # 데이터 로드
+            interview_df = load_interview_data()
+            
+            if interview_df is not None and len(interview_df) > 0:
+                # 조회 조건 설정
+                col1, col2, col3, col4 = st.columns([0.2, 0.2, 0.2, 0.4 ])
+                
+                with col1:
+                    # 시작일 선택 (오늘 - 15일)
+                    start_date = st.date_input(
+                        "시작일",
+                        value=datetime.now().date() - timedelta(days=15),
+                        help="면접일정 조회 시작일을 선택하세요."
+                    )
+                
+                with col2:
+                    # 종료일 선택 (오늘 + 30일)
+                    end_date = st.date_input(
+                        "종료일",
+                        value=datetime.now().date() + timedelta(days=30),
+                        help="면접일정 조회 종료일을 선택하세요."
+                    )
+                
+                with col3:
+                    # 전형구분 선택 (None 값과 0 값 처리)
+                    interview_types = ['전체'] + sorted([
+                        str(t) for t in interview_df['전형구분'].unique() 
+                        if pd.notna(t) and str(t) != '0' and str(t) != '0.0' and t != 0
+                    ])
+                    selected_type = st.selectbox("전형구분", interview_types)
+                
+                with col4:
+                    # 여백 컬럼
+                    st.empty()
+                # 데이터 필터링
+                filtered_df = interview_df[
+                    (interview_df['면접일자'].dt.date >= start_date) &
+                    (interview_df['면접일자'].dt.date <= end_date)
+                ]
+                
+                if selected_type != '전체':
+                    filtered_df = filtered_df[filtered_df['전형구분'].astype(str) == selected_type]
+
+                if len(filtered_df) > 0:
+                    # 표시할 컬럼 선택
+                    display_columns = ['채용분야', '성명', '전형구분', '면접일자', '면접일시', '특이사항']
+                    display_df = filtered_df[display_columns].copy()
+                    
+                    # 면접일자 기준으로 내림차순 정렬
+                    display_df = display_df.sort_values('면접일자', ascending=False)
+                    
+                    # 면접일자 포맷 변경
+                    display_df['면접일자'] = display_df['면접일자'].dt.strftime('%Y-%m-%d')
+                    
+                    # 인덱스 1부터 시작하도록 설정
+                    display_df = display_df.reset_index(drop=True)
+                    display_df.index = display_df.index + 1
+                    
+                    # 데이터프레임 표시
+                    st.dataframe(
+                        display_df,
+                        column_config={
+                            "채용분야": st.column_config.TextColumn("채용분야", width=150),
+                            "성명": st.column_config.TextColumn("성명", width=100),
+                            "전형구분": st.column_config.TextColumn("전형구분", width=100),
+                            "면접일자": st.column_config.TextColumn("면접일자", width=100),
+                            "면접일시": st.column_config.TextColumn("면접일시", width=200),
+                            "특이사항": st.column_config.TextColumn("특이사항", width=300)
+                        },
+                        hide_index=False
+                    )
+                else:
+                    st.info("선택한 기간에 해당하는 면접 데이터가 없습니다.")
+            else:
+                st.warning("면접 현황 데이터를 불러올 수 없습니다.")
+
+            st.markdown("---")
+            st.markdown("##### 💡 지원자 접수 통계")
+            
+            # 지원자 통계 데이터 로드
+            @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+            def load_applicant_stats():
+                try:
+                    # 현재 디렉토리에서 엑셀 파일 경로 설정
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    
+                    # 엑셀 파일에서 "채용-지원자" 시트 읽기
+                    df = pd.read_excel(file_path, sheet_name="채용-지원자")
+                    
+                    # 성명이 0인 행 제거
+                    df = df[df['성명'] != 0]
+                    df = df[df['성명'] != '0']
+                    
+                    # 등록날짜에서 연도 추출
+                    df['지원연도'] = pd.to_datetime(df['등록날짜']).dt.year
+                    
+                    return df
+                except Exception as e:
+                    st.error(f"지원자 통계 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+                    return None
+
+            # 데이터 로드
+            applicant_df = load_applicant_stats()
+            
+            if applicant_df is not None and len(applicant_df) > 0:
+                # 연도 선택
+                years = sorted(applicant_df['지원연도'].unique(), reverse=True)
+                selected_year = st.selectbox("조회연도", years, key="applicant_year")
+                
+                # 선택된 연도의 데이터만 필터링
+                year_df = applicant_df[applicant_df['지원연도'] == selected_year]
+                
+                # 접수방법 통계
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    
+                    # 접수방법 순서 정의
+                    channel_order = ['뉴로핏커리어', '사내추천', '원티드', '헤드헌팅', '점핏', '인재서치', '기타']
+                    
+                    # 접수방법별 카운트
+                    channel_stats = year_df['접수방법'].value_counts().reindex(channel_order).fillna(0)
+                    total_channel = channel_stats.sum()
+                    # 차트 생성
+                    fig_channel = px.bar(
+                        x=channel_stats.index,
+                        y=channel_stats.values,
+                        labels={'x': '', 'y': '지원자 수'},
+                        title=f"{selected_year}년 접수방법별 지원자 현황 (총 {int(total_channel):,}명)"
+                    )
+                    
+                    # 차트 스타일 설정
+                    colors = ['#FF4B4B' if x == '뉴로핏커리어' else '#FFB6B6' for x in channel_stats.index]
+                    fig_channel.update_traces(marker_color=colors)
+                    # 막대 위에 값 표시 추가
+                    fig_channel.update_traces(
+                        text=channel_stats.values.astype(int),
+                        textposition='outside'
+                    )
+                    fig_channel.update_layout(
+                        showlegend=False,
+                        height=450,
+                        title_x=0,
+                        title_y=0.95,
+                        margin=dict(t=70)  # 상단 여백을 더 크게 증가
+                    )
+                    
+                    # 차트 표시
+                    st.plotly_chart(fig_channel, use_container_width=True)
+                with col2:
+                    # 여백 컬럼
+                    st.empty()
+
+                col1, col2 = st.columns([0.7, 0.3])
+                with col1:
+                    
+                    # 전형결과 순서 정의
+                    result_order = [
+                        '[1]서류검토', '[2]서류합격', '[3]1차면접합격', '[4]2차면접합격', '[5]최종합격','입사포기',
+                        '서류불합격', '1차면접불합격', '2차면접불합격', '면접불참',  '보류', '연락안됨'
+                    ]
+                    
+                    # 전형결과별 카운트
+                    result_stats = year_df['전형 결과'].value_counts().reindex(result_order).fillna(0)
+                    total = result_stats.sum()
+                    
+                    # '합계' 항목 제외
+                    result_stats = result_stats[result_stats.index != '합계']
+                    
+                    # 차트 생성
+                    fig_result = px.bar(
+                        x=result_stats.values,
+                        y=result_stats.index,
+                        orientation='h',  # 수평 방향으로 변경
+                        labels={'x': '지원자 수', 'y': ''},
+                        title=f"{selected_year}년 전형결과별 현황 (총 {int(total):,}명)"
+                    )
+                    
+                    # 차트 스타일 설정
+                    colors = ['#FF4B4B' if x in ['[5]최종합격', '입사포기'] else '#FFB6B6' for x in result_stats.index]
+                    fig_result.update_traces(
+                        marker_color=colors,
+                        text=result_stats.values.astype(int),
+                        textposition='outside'
+                    )
+                    
+                    fig_result.update_layout(
+                        height=600,
+                        showlegend=False,
+                        title_x=0,
+                        title_y=0.95,
+                        margin=dict(t=70, r=20, l=20),
+                        xaxis_title="",
+                        yaxis_title="",
+                        yaxis=dict(autorange="reversed")  # 위에서 아래로 정렬
+                    )
+                    
+                    # 차트 표시
+                    st.plotly_chart(fig_result, use_container_width=True)
+                
+            else:
+                st.warning("지원자 통계 데이터를 불러올 수 없습니다.")
+ 
+except Exception as e: 
+    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")    
