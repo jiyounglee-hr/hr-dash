@@ -2356,9 +2356,19 @@ try:
                 
                 with col1:
                     # 보고상태 선택
-                    status_options = ['보고예정', '보고완료']
+                    status_options = ['보고예정', '보고완료', '🐯 보고']
                     selected_status = st.selectbox('보고상태', status_options)
 
+                    # 🐯 보고 선택 시 비밀번호 확인
+                    if selected_status == '🐯 보고':
+                        password = st.text_input("비밀번호를 입력하세요", type="password")
+                        if password != "0328":
+                            st.error("비밀번호가 올바르지 않습니다.")
+                            st.stop()  # 여기서 실행을 중단
+                        else:
+                            st.success("인증되었습니다.")
+
+                    # 나머지 코드는 비밀번호가 맞을 때만 실행됨
                     # 선택된 보고상태에 해당하는 데이터만 필터링
                     status_filtered_df = report_df[report_df['보고상태'] == selected_status]
                     
