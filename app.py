@@ -2375,15 +2375,18 @@ try:
                 with col3:
                     # 🐯 보고 선택 시 비밀번호 확인
                     if selected_status == '🐯 보고':
-                        password = st.text_input("비밀번호를 입력하세요", type="password")
-                        if not password:  # 비밀번호가 입력되지 않은 경우
-                            st.warning("비밀번호를 입력해주세요.")
-                            st.stop()
-                        elif password != "0328":  # 비밀번호가 틀린 경우
-                            st.error("비밀번호가 올바르지 않습니다.")
-                            st.stop()  # 여기서 실행을 중단
-                        else:
-                            st.success("인증되었습니다.")
+                        pw_col1, pw_col2 = st.columns([0.3, 0.7])
+                        with pw_col1:
+                            password = st.text_input("비밀번호를 입력하세요", type="password")
+                        with pw_col2:
+                            if not password:  # 비밀번호가 입력되지 않은 경우
+                                st.warning("비밀번호를 입력해주세요.")
+                                st.stop()
+                            elif password != "0328":  # 비밀번호가 틀린 경우
+                                st.error("비밀번호가 올바르지 않습니다.")
+                                st.stop()  # 여기서 실행을 중단
+                            else:
+                                st.success("인증되었습니다.")
 
                 # 추가 필터링
                 filtered_df = status_filtered_df
