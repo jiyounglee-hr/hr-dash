@@ -2380,13 +2380,13 @@ try:
                             password = st.text_input("비밀번호를 입력하세요", type="password")
                         with pw_col2:
                             if not password:  # 비밀번호가 입력되지 않은 경우
-                                st.warning("비밀번호를 입력해주세요.")
+                                st.markdown('<p style="color: #F0B726; margin: 0;">비밀번호를 입력해주세요.</p>', unsafe_allow_html=True)
                                 st.stop()
                             elif password != "0328":  # 비밀번호가 틀린 경우
-                                st.error("비밀번호가 올바르지 않습니다.")
+                                st.markdown('<p style="color: #FF4B4B; margin: 0;">비밀번호가 올바르지 않습니다.</p>', unsafe_allow_html=True)
                                 st.stop()  # 여기서 실행을 중단
                             else:
-                                st.success("인증되었습니다.")
+                                st.markdown('<p style="color: #00CC00; margin: 0;">인증되었습니다.</p>', unsafe_allow_html=True)
 
                 # 추가 필터링
                 filtered_df = status_filtered_df
