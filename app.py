@@ -2356,7 +2356,7 @@ try:
                 
                 with col1:
                     # 보고상태 선택
-                    status_options = ['보고예정', '보고완료', '🐯 보고']
+                    status_options = ['보고예정', '보고완료', '🐯 보고예정', '🐯 보고완료']
                     selected_status = st.selectbox('보고상태', status_options)
 
                 # 선택된 보고상태에 해당하는 데이터 필터링
@@ -2374,7 +2374,7 @@ try:
 
                 with col3:
                     # 🐯 보고 선택 시 비밀번호 확인
-                    if selected_status == '🐯 보고':
+                    if selected_status == '🐯 보고예정' or selected_status == '🐯 보고예정' :
                         pw_col1, pw_col2 = st.columns([0.3, 0.7])
                         with pw_col1:
                             password = st.text_input("비밀번호를 입력하세요", type="password")
