@@ -2359,6 +2359,20 @@ try:
                     status_options = ['보고예정', '보고완료', '🐯 보고']
                     selected_status = st.selectbox('보고상태', status_options)
 
+                # 선택된 보고상태에 해당하는 데이터 필터링
+                status_filtered_df = report_df[report_df['보고상태'] == selected_status]
+
+                with col2:
+                    # 타입과 보고일을 합친 옵션 생성
+                    type_date_options = ['전체']
+                    for type_val in status_filtered_df['타입'].unique():
+                        dates = status_filtered_df[status_filtered_df['타입'] == type_val]['보고일'].dt.strftime('%Y-%m-%d').unique()
+                        for date in dates:
+                            type_date_options.append(f"{type_val} - {date}")
+                    
+                    selected_type_date = st.selectbox('타입 - 보고일자', type_date_options)
+
+                with col3:
                     # 🐯 보고 선택 시 비밀번호 확인
                     if selected_status == '🐯 보고':
                         password = st.text_input("비밀번호를 입력하세요", type="password")
@@ -2371,22 +2385,8 @@ try:
                         else:
                             st.success("인증되었습니다.")
 
-                # 데이터 필터링
-                filtered_df = report_df[report_df['보고상태'] == selected_status]
-                
-                with col2:
-                    # 타입과 보고일을 합친 옵션 생성
-                    type_date_options = ['전체']
-                    for type_val in status_filtered_df['타입'].unique():
-                        dates = status_filtered_df[status_filtered_df['타입'] == type_val]['보고일'].dt.strftime('%Y-%m-%d').unique()
-                        for date in dates:
-                            type_date_options.append(f"{type_val} - {date}")
-                    
-                    selected_type_date = st.selectbox('타입 - 보고일자', type_date_options)
-
-                with col3:
-                    st.write("")
-
+                # 추가 필터링
+                filtered_df = status_filtered_df
                 if selected_type_date != '전체':
                     type_val, date_val = selected_type_date.split(' - ')
                     filtered_df = filtered_df[
