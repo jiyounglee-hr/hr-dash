@@ -2361,17 +2361,21 @@ try:
 
                     # 🐯 보고 선택 시 비밀번호 확인
                     if selected_status == '🐯 보고':
-                        password = st.text_input("비밀번호를 입력하세요", type="password")
-                        if password != "0328":
-                            st.error("비밀번호가 올바르지 않습니다.")
-                            st.stop()  # 여기서 실행을 중단
-                        else:
-                            st.success("인증되었습니다.")
+                        col3_1, col3_2 = st.columns([0.4, 0.6])
+                        with col3_1:
+                            password = st.text_input("비밀번호를 입력하세요", type="password")
+                            if not password:  # 비밀번호가 입력되지 않은 경우
+                                st.warning("비밀번호를 입력해주세요.")
+                                st.stop()
+                            elif password != "0328":  # 비밀번호가 틀린 경우
+                                st.error("비밀번호가 올바르지 않습니다.")
+                                st.stop()  # 여기서 실행을 중단
+                            else:
+                                st.success("인증되었습니다.")
 
-                    # 나머지 코드는 비밀번호가 맞을 때만 실행됨
-                    # 선택된 보고상태에 해당하는 데이터만 필터링
-                    status_filtered_df = report_df[report_df['보고상태'] == selected_status]
-                    
+                # 데이터 필터링
+                filtered_df = report_df[report_df['보고상태'] == selected_status]
+                
                 with col2:
                     # 타입과 보고일을 합친 옵션 생성
                     type_date_options = ['전체']
@@ -2385,9 +2389,6 @@ try:
                 with col3:
                     st.write("")
 
-                # 데이터 필터링
-                filtered_df = report_df[report_df['보고상태'] == selected_status]
-                
                 if selected_type_date != '전체':
                     type_val, date_val = selected_type_date.split(' - ')
                     filtered_df = filtered_df[
