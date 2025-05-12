@@ -864,10 +864,12 @@ try:
                 퇴사자_df = df[df['퇴사연도'] == 2025][['성명', '팀', '직위', '퇴사일']]
                 if not 퇴사자_df.empty:
                     퇴사자_df = 퇴사자_df.sort_values('퇴사일', ascending=False)  # 내림차순 정렬
+                    # 퇴사일 컬럼을 문자열로 변환
+                    퇴사자_df['퇴사일'] = 퇴사자_df['퇴사일'].dt.strftime('%Y-%m-%d')
                     퇴사자_df = 퇴사자_df.reset_index(drop=True)
                     퇴사자_df.index = 퇴사자_df.index + 1
                     퇴사자_df = 퇴사자_df.rename_axis('No.')
-                    st.dataframe(퇴사자_df.style.format({'퇴사일': lambda x: x.strftime('%Y-%m-%d')}),
+                    st.dataframe(퇴사자_df,
                                use_container_width=True)
                 else:
                     st.info("2025년 퇴사자가 없습니다.")
