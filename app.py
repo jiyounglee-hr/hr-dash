@@ -1667,7 +1667,7 @@ try:
                         # 해당 직군의 임금 데이터 가져오기
                         min_salary = round(float(filtered_data['최소연봉']))
                         max_salary = round(float(filtered_data['최대연봉']))
-                        avg_salary = round(float((min_salary + max_salary) / 2))
+                        avg_salary = round(float(filtered_data['평균연봉']))
 
                         # 분석 결과 표시
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -1743,26 +1743,31 @@ try:
                             recommended_salary = current_salary
                                                 
                         # 최종보상 계산
-                        final_compensation = current_salary + other_salary
+                        final_compensation = float(current_salary) + float(other_salary)
                         
                         # 제시금액 계산 로직
                         def calculate_suggested_salary(total_comp, min_salary, avg_salary, max_salary):
+                            total_comp = float(total_comp)
+                            min_salary = float(min_salary)
+                            avg_salary = float(avg_salary)
+                            max_salary = float(max_salary)
+                            
                             increase_10 = total_comp * 1.1
                             increase_5 = total_comp * 1.05
                             increase_2 = total_comp * 1.02
                             
                             if increase_10 <= avg_salary:
-                                return int(increase_10)
+                                return round(increase_10)
                             elif increase_5 < avg_salary:
-                                return int(avg_salary)
+                                return round(avg_salary)
                             elif increase_5 >= avg_salary and total_comp <= avg_salary:
-                                return int(increase_5)
+                                return round(increase_5)
                             elif total_comp > avg_salary and total_comp <= max_salary:
-                                return int(increase_2)
+                                return round(increase_2)
                             else:
                                 return "[별도 계산 필요]"
 
-                        # 제시금액 계산
+                        # 제시금액 계산 
                         suggested_salary = calculate_suggested_salary(
                             final_compensation, 
                             min_salary, 
