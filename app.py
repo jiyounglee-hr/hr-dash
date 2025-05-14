@@ -1637,6 +1637,11 @@ try:
                         # salary_table.xlsx 파일 읽기
                         salary_table = pd.read_excel("salary_table.xlsx")
                         
+                        # 숫자 컬럼들을 float 타입으로 변환
+                        numeric_columns = ['최소연봉', '평균연봉', '최대연봉', '연차']
+                        for col in numeric_columns:
+                            salary_table[col] = pd.to_numeric(salary_table[col], errors='coerce')
+                        
                         # 선택된 직군상세에 해당하는 직군 가져오기
                         selected_job_category = job_mapping[job_role]
                         
@@ -1660,9 +1665,9 @@ try:
                         filtered_data = filtered_data.iloc[0]
                         
                         # 해당 직군의 임금 데이터 가져오기
-                        min_salary = filtered_data['최소연봉']
-                        max_salary = filtered_data['최대연봉']
-                        avg_salary = (min_salary + max_salary) / 2
+                        min_salary = round(float(filtered_data['최소연봉']))
+                        max_salary = round(float(filtered_data['최대연봉']))
+                        avg_salary = round(float((min_salary + max_salary) / 2))
 
                         # 분석 결과 표시
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -1674,9 +1679,9 @@ try:
                         st.markdown(f"""
                         <div style="font-size: 1rem;">
                         <strong>현재 연봉 : {int(current_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp; </strong>
-                        <strong>최소 연봉 : {int(min_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
-                        <strong style="color: red;">평균 연봉 : {int(avg_salary):,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
-                        <strong>최대 연봉 : {int(max_salary):,}만원</strong>
+                        <strong>최소 연봉 : {min_salary:,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
+                        <strong style="color: red;">평균 연봉 : {avg_salary:,}만원 &nbsp;&nbsp;&nbsp;&nbsp;</strong>
+                        <strong>최대 연봉 : {max_salary:,}만원</strong>
                         </div>
                         """, unsafe_allow_html=True)
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -1692,10 +1697,10 @@ try:
                             ].sort_values('연차')
                             
                             if not related_data.empty:
-                                # 모든 연봉 컬럼을 정수로 변환
-                                related_data['최소연봉'] = related_data['최소연봉'].astype(int)
-                                related_data['평균연봉'] = related_data['평균연봉'].astype(int)
-                                related_data['최대연봉'] = related_data['최대연봉'].astype(int)
+                                # 모든 연봉 컬럼을 반올림하여 정수로 변환
+                                related_data['최소연봉'] = related_data['최소연봉'].astype(float).round().astype(int)
+                                related_data['평균연봉'] = related_data['평균연봉'].astype(float).round().astype(int)
+                                related_data['최대연봉'] = related_data['최대연봉'].astype(float).round().astype(int)
                                 
                                 st.dataframe(
                                     related_data[['연차', '최소연봉', '평균연봉', '최대연봉']].rename(
@@ -1714,7 +1719,7 @@ try:
                                         '최대연봉(만원)': st.column_config.Column(width=100)
                                     }
                                 )
-                            else:
+                            else: 
                                 st.info("해당 직군의 임금테이블 데이터가 없습니다.")
                         
                         with col2:
