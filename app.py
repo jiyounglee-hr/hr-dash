@@ -1774,8 +1774,12 @@ try:
                             avg_salary, 
                             max_salary
                         )
+                        
                         # 연봉 보존율 계산
-                        preservation_rate = (suggested_salary / final_compensation) * 100
+                        if isinstance(suggested_salary, str):
+                            preservation_rate = 0
+                        else:
+                            preservation_rate = round((float(suggested_salary) / float(final_compensation)) * 100, 1)
 
                         # 현재 상황에 맞는 제시금액 계산 로직 결정
                         if final_compensation * 1.1 < avg_salary:
@@ -1806,7 +1810,7 @@ try:
                         - 특이사항: {education_notes}
 
                         [참고]
-                        - {calculation_logic}
+                        - {calculation_logic} 
                         - 기존 보상총액 보존율: {preservation_rate:.1f}%
                         """)
                         # 상세 분석 결과 expander
