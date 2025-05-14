@@ -71,7 +71,7 @@ def calculate_experience(experience_text):
     """경력기간을 계산하는 함수"""
     from datetime import datetime
     import pandas as pd
-    import re 
+    import re  
     
     # 영문 월을 숫자로 변환하는 딕셔너리
     month_dict = {
