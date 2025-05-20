@@ -26,16 +26,8 @@ def main():
             print("변경 없음.")
             return
 
-    # 모든 변경사항을 스테이징
-    subprocess.run(["git", "add", "."], check=True)
-    
-    # 원격 저장소의 변경사항을 가져옴
-    try:
-        subprocess.run(["git", "pull"], check=True)
-    except subprocess.CalledProcessError:
-        print("pull 중 오류 발생, 계속 진행합니다.")
-    
-    commit_msg = f"자동 커밋: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    subprocess.run(["git", "add", EXCEL_FILE], check=True)
+    commit_msg = f"진이수정 자동 커밋: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     subprocess.run(["git", "commit", "-m", commit_msg], check=True)
     subprocess.run(["git", "push"], check=True)
     print("변경 감지 → GitHub에 푸시 완료.")
