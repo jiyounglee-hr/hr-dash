@@ -27,7 +27,7 @@ def main():
             return
 
     subprocess.run(["git", "add", EXCEL_FILE], check=True)
-    commit_msg = f"진이수정 자동 커밋: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    commit_msg = f"자동 커밋: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     subprocess.run(["git", "commit", "-m", commit_msg], check=True)
     subprocess.run(["git", "push"], check=True)
     print("변경 감지 → GitHub에 푸시 완료.")

@@ -29,6 +29,25 @@ import pytz
 import gspread
 import tempfile
 from PyPDF2 import PdfMerger
+import msal
+from dotenv import load_dotenv
+
+# 환경 변수 로드
+load_dotenv()
+
+# Microsoft Azure AD 설정
+CLIENT_ID = st.secrets["AZURE_AD_CLIENT_ID"]
+TENANT_ID = st.secrets["AZURE_AD_TENANT_ID"]
+CLIENT_SECRET = st.secrets["AZURE_AD_CLIENT_SECRET"]
+# 팀즈 호환성을 위해 REDIRECT_URI를 명확하게 설정
+REDIRECT_URI = "https://hrmate.streamlit.app/"
+
+# MSAL 앱 초기화
+msal_app = msal.ConfidentialClientApplication(
+    CLIENT_ID,
+    authority=f"https://login.microsoftonline.com/{TENANT_ID}",
+    client_credential=CLIENT_SECRET
+)
 
 # 날짜 정규화 함수
 def normalize_date(date_str):
@@ -82,7 +101,7 @@ def calculate_experience(experience_text):
     total_months = 0
     experience_periods = []
     
-    # 각 줄을 분리하여 처리
+    # 각 줄을 분리하여 처리 
     lines = experience_text.split('\n')
     current_company = None
     
@@ -332,6 +351,7 @@ st.markdown("""
     }
     .title-container {
         padding-top: 1rem;
+
     }
     .title-container h1 {
         margin: 0;
@@ -371,64 +391,91 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def show_header():
-    """로고와 시스템 이름을 표시하는 함수"""
-    st.markdown("""
-        <div class="header-container">
-            <div class="logo-container">
-                <img src="https://neurophethr.notion.site/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fe3948c44-a232-43dd-9c54-c4142a1b670b%2Fneruophet_logo.png?table=block&id=893029a6-2091-4dd3-872b-4b7cd8f94384&spaceId=9453ab34-9a3e-45a8-a6b2-ec7f1cefbd7f&width=410&userId=&cache=v2" width="130">
-            </div>
-            <div class="title-container">
-                <h1>HRmate</h1>
-                <p>인원 현황 및 자동화 지원 시스템</p>
-            </div>
-        </div>
-        <div class="divider"><hr></div>
-    """, unsafe_allow_html=True)
 
-# 비밀번호 인증
-def check_password():
-    """Returns `True` if the user had the correct password."""
 
-    def password_entered():
-        """Checks whether a password entered by the user is correct."""
-        if st.session_state.get("password") == "0314!":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Don't store password.
+# Microsoft 로그인
+def login():
+    """로그인 처리 함수 - 인증 처리만 담당"""
+    if 'user_info' not in st.session_state:
+        st.session_state.user_info = None
+    
+    # 1. 먼저 세션에 저장된 사용자 정보 확인
+    if st.session_state.user_info is not None:
+        user_email = st.session_state.user_info.get('mail', '')
+        if user_email and check_authorization(user_email):
+            return True  # 이미 로그인되어 있고 권한도 있음
         else:
-            st.session_state["password_correct"] = False
-
-    # First run or input not cleared.
-    if "password_correct" not in st.session_state:
-        show_header()
-        # 비밀번호 입력 필드를 중앙에 배치
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            st.markdown('<div class="password-input">', unsafe_allow_html=True)
-            st.text_input(
-                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
+            # 권한이 없거나 이메일이 없는 경우 세션 초기화
+            st.session_state.user_info = None
+    
+    # 2. URL 파라미터에서 인증 코드 확인 (새로운 로그인 시도)
+    query_params = st.query_params
+    code = query_params.get("code", None)
+    
+    if code:
+        try:
+            # 토큰 획득
+            result = msal_app.acquire_token_by_authorization_code(
+                code,
+                scopes=["User.Read"],
+                redirect_uri=REDIRECT_URI
             )
-            st.markdown('</div>', unsafe_allow_html=True)
-        return False
-    elif not st.session_state["password_correct"]:
-        show_header()
-        # Password not correct, show input + error.
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            st.markdown('<div class="password-input">', unsafe_allow_html=True)
-            st.text_input(
-                "비밀번호를 입력하세요", type="password", on_change=password_entered, key="password"
-            )
-            st.markdown('</div>', unsafe_allow_html=True)
-            st.error("😕 비밀번호가 올바르지 않습니다")
-        return False
-    else:
-        # Password correct.
-        return True
+             
+            if "access_token" in result:
+                # Microsoft Graph API를 사용하여 사용자 정보 가져오기
+                graph_data = requests.get(
+                    "https://graph.microsoft.com/v1.0/me",
+                    headers={'Authorization': 'Bearer ' + result['access_token']},
+                ).json()
+                
+                if 'mail' in graph_data:
+                    # 권한 확인
+                    if check_authorization(graph_data['mail']):
+                        st.session_state.user_info = graph_data
+                        # 자동 리디렉션 플래그 초기화
+                        st.session_state.auto_redirect_attempted = False
+                        st.success(f"환영합니다, {graph_data.get('displayName', '사용자')}님!")
+                        # 인증 코드를 URL에서 제거하여 리디렉션 루프 방지
+                        st.query_params.clear()
+                        st.rerun()
+                        return True
+                    else:
+                        st.error("권한이 없습니다. 인사팀에 문의하세요.")
+                        st.session_state.user_info = None
+                        return False
+                else:
+                    st.error("사용자 정보를 가져오는데 실패했습니다.")
+                    return False
+            else:
+                st.error("토큰 획득에 실패했습니다.")
+                return False
+        except Exception as e:
+            st.error(f"로그인 처리 중 오류가 발생했습니다: {str(e)}")
+            return False
+    
+    # 3. 로그인되지 않은 상태
+    return False
 
-# 비밀번호 확인
-if not check_password():
-    st.stop()  # Do not continue if check_password() returned False.
+@st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+def load_authorized_emails():
+    """권한이 있는 이메일 목록을 로드하는 함수"""
+    try:
+        # 엑셀 파일에서 권한 정보 읽기
+        df = pd.read_excel('임직원 기초 데이터.xlsx', sheet_name='hrmate권한')
+        authorized_emails = df['이메일'].dropna().tolist()
+        return authorized_emails
+    except Exception as e:
+        st.error(f"권한 정보를 불러오는 중 오류가 발생했습니다: {str(e)}")
+        return [] 
+
+def check_authorization(email):
+    """이메일 권한을 확인하는 함수"""
+    authorized_emails = load_authorized_emails()
+    return email.lower() in [e.lower() for e in authorized_emails]
+
+# 로그인 확인 - 제거
+# if not login():
+#     st.stop()  # 로그인되지 않은 경우 실행 중지
 
 # 데이터 로드 함수
 @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
@@ -608,12 +655,97 @@ st.sidebar.markdown("<br>", unsafe_allow_html=True)
 with st.sidebar.expander("💡 전사지원"):
     st.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
 
+st.sidebar.markdown("---")
+
+
+# 로그인된 사용자 정보 표시
+if 'user_info' in st.session_state and st.session_state.user_info is not None:
+
+    user_name = st.session_state.user_info.get('displayName', '사용자')
+    
+    st.sidebar.markdown(f"**👤접속자 : {user_name}**")
+
+    if st.sidebar.button("🚪 로그아웃", use_container_width=True):
+        st.session_state.user_info = None
+        # 자동 리디렉션 플래그 초기화
+        st.session_state.auto_redirect_attempted = False
+        st.rerun()
+
 # 기본 메뉴 설정
 if 'menu' not in st.session_state:
     st.session_state.menu = "📊 인원현황"
 menu = st.session_state.menu
 
-try:
+def main():
+    # 로그인 처리
+    is_logged_in = login()
+    
+    if not is_logged_in:
+        # 로그인되지 않은 경우 - 자동 리디렉션 또는 로그인 버튼 표시
+        col1, col2, col3 = st.columns([0.1, 0.5, 0.4])
+        with col2:
+            st.markdown("""
+                <div class="header-container">
+                    <div class="logo-container">
+                        <img src="https://neurophethr.notion.site/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fe3948c44-a232-43dd-9c54-c4142a1b670b%2Fneruophet_logo.png?table=block&id=893029a6-2091-4dd3-872b-4b7cd8f94384&spaceId=9453ab34-9a3e-45a8-a6b2-ec7f1cefbd7f&width=410&userId=&cache=v2" width="100">
+                    </div>
+                    <div class="title-container">
+                        <h1>HRmate</h1>
+                        <p>🔐 아래 버튼을 눌러 Microsoft 계정으로 로그인해 주세요.</p>
+                    </div>
+                </div>
+                <div class="divider"><hr></div>
+            """, unsafe_allow_html=True)
+        
+        # Microsoft 로그인 URL 생성
+        auth_url = msal_app.get_authorization_request_url(
+            scopes=["User.Read"],
+            redirect_uri=REDIRECT_URI,
+            state=st.session_state.get("_session_id", "")
+        )
+        
+        # 자동 리디렉션 시도 여부 확인
+        if 'auto_redirect_attempted' not in st.session_state:
+            st.session_state.auto_redirect_attempted = False
+        
+        # 로그인 실패 여부 확인 (URL 파라미터에 error가 있는 경우)
+        query_params = st.query_params
+        has_error = query_params.get("error", None) is not None
+        
+        if not st.session_state.auto_redirect_attempted and not has_error:
+            # 로그인 시도 상태 업데이트
+            st.session_state.auto_redirect_attempted = True
+            
+            col1, col2, col3 = st.columns([0.1, 0.5, 0.4])
+            with col2:
+                st.link_button(
+                    "Microsoft 계정으로 로그인",
+                    auth_url,
+                    type="primary",
+                    use_container_width=True
+                )
+            st.stop()
+        else:
+            col1, col2, col3 = st.columns([0.1, 0.5, 0.4])
+            with col2:
+                # 자동 리디렉션이 실패했거나 에러가 있는 경우 수동 버튼 표시
+                if has_error:
+                    st.error("로그인 중 문제가 발생했습니다. 다시 시도해주세요.")
+                else:
+                    st.warning("아래 버튼을 클릭해서 로그인을 먼저 해주세요.") 
+            
+                # st.link_button을 사용하여 직접 링크로 이동
+                st.link_button(
+                    "Microsoft 계정으로 로그인",
+                    auth_url,
+                    type="primary",
+                    use_container_width=True
+                )
+                
+        
+        st.stop()
+    
+    # 로그인된 경우 - 기존 메인 로직 실행
     # 데이터 로드
     df = load_data()
     
@@ -1292,7 +1424,7 @@ try:
             )
 
         elif menu == "🔍 연락처/생일 검색":
-            st.markdown("##### 🔍 연연락처/생일 검색")
+            st.markdown("##### 🔍 연락처/생일 검색")
             
             # 검색 부분을 컬럼으로 나누기
             search_col, space_col = st.columns([0.3, 0.7])
@@ -1619,7 +1751,7 @@ try:
                 with col4:
                     current_salary = st.number_input("현재연봉 (만원)", min_value=0, step=100)
                 with col5:
-                    other_salary = st.number_input("기타 보상상 (만원)", min_value=0, step=100)
+                    other_salary = st.number_input("기타 보상 (만원)", min_value=0, step=100)
                 with col6:
                     desired_salary = st.number_input("희망연봉 (만원)", min_value=0, step=100)
                 with col7:
@@ -2387,21 +2519,18 @@ try:
                     selected_type_date = st.selectbox('타입 - 보고일자', type_date_options)
 
                 with col3:
-                    # 🐯 보고 선택 시 비밀번호 확인
-                    if selected_status == '🐯 보고예정' or selected_status == '🐯 보고예정' :
-                        pw_col1, pw_col2 = st.columns([0.3, 0.7])
-                        with pw_col1:
-                            password = st.text_input("비밀번호를 입력하세요", type="password")
-                        with pw_col2:
-                            if not password:  # 비밀번호가 입력되지 않은 경우
-                                st.markdown('<p style="color: #F0B726; margin: 0;">비밀번호를 입력해주세요.</p>', unsafe_allow_html=True)
-                                st.stop()
-                            elif password != "0328":  # 비밀번호가 틀린 경우
-                                st.markdown('<p style="color: #FF4B4B; margin: 0;">비밀번호가 올바르지 않습니다.</p>', unsafe_allow_html=True)
-                                st.stop()  # 여기서 실행을 중단
-                            else:
-                                st.markdown('<p style="color: #00CC00; margin: 0;">인증되었습니다.</p>', unsafe_allow_html=True)
-
+                    # 🐯 보고 선택 시 HR 권한 확인
+                    if selected_status == '🐯 보고예정' or selected_status == '🐯 보고완료':
+                        # 현재 로그인된 사용자의 이메일 확인
+                        user_email = st.session_state.user_info.get('mail', '')
+                        
+                        # 권한 확인
+                        if not check_authorization(user_email):
+                            st.error("🐯권한이 없습니다. 접근이 제한됩니다.")
+                            st.stop()
+                        else:
+                            st.markdown("<br>🐯권한이 확인되었습니다.", unsafe_allow_html=True)
+                            
                 # 추가 필터링
                 filtered_df = status_filtered_df
                 if selected_type_date != '전체':
@@ -3244,5 +3373,17 @@ try:
             else: 
                 st.warning("지원자 통계 데이터를 불러올 수 없습니다.")
  
-except Exception as e: 
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")    
+            # 지원자 통계
+            st.markdown("### 📊 지원자 통계")
+            try:
+                applicant_stats_df = load_applicant_stats()
+                if applicant_stats_df is not None and not applicant_stats_df.empty:
+                    # 지원자 통계 데이터 표시
+                    st.dataframe(applicant_stats_df, use_container_width=True)
+                else:
+                    st.warning("지원자 통계 데이터를 불러올 수 없습니다.")
+            except Exception as e:
+                st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+
+if __name__ == "__main__":
+    main()
