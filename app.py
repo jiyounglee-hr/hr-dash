@@ -465,13 +465,47 @@ def load_authorized_emails():
         authorized_emails = df['이메일'].dropna().tolist()
         return authorized_emails
     except Exception as e:
-        st.error(f"권한 정보를 불러오는 중 오류가 발생했습니다: {str(e)}")
-        return [] 
+        st.error(f"이메일 목록을 불러오는 중 오류가 발생했습니다: {str(e)}")
+        return []
 
 def check_authorization(email):
     """이메일 권한을 확인하는 함수"""
     authorized_emails = load_authorized_emails()
-    return email.lower() in [e.lower() for e in authorized_emails]
+    return email.lower().strip() in [e.lower().strip() for e in authorized_emails]
+
+def get_user_permission(email):
+    """
+    사용자의 권한명을 가져오는 함수
+    :param email: 확인할 이메일 주소
+    :return: 권한명 (권한이 없으면 None)
+    """
+    try:
+        df = pd.read_excel('임직원 기초 데이터.xlsx', sheet_name='hrmate권한')
+        
+        user_row = df[df['이메일'].str.lower().str.strip() == email.lower().strip()]
+        
+        if not user_row.empty and '권한명' in user_row.columns:
+            permission = user_row.iloc[0]['권한명']
+            return permission
+        return None
+    except Exception as e:
+        st.error(f"권한 정보를 불러오는 중 오류가 발생했습니다: {str(e)}")
+        return None
+
+def check_user_permission(required_permissions):
+    """
+    사용자의 권한을 체크하는 함수
+    :param required_permissions: 필요한 권한 리스트 (예: ['HR', 'C-LEVEL'])
+    :return: bool
+    """
+    if 'user_info' not in st.session_state or st.session_state.user_info is None:
+        return False
+        
+    user_email = st.session_state.user_info.get('mail', '')  # 'email' 대신 'mail' 사용
+    user_permission = get_user_permission(user_email)
+    
+    
+    return user_permission in required_permissions if user_permission else False
 
 # 로그인 확인 - 제거
 # if not login():
@@ -616,53 +650,53 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 제목
-st.sidebar.title("👥 HRmate")
-st.sidebar.markdown("---")
-
-# HR Data 섹션
-st.sidebar.markdown("#### HR Data")
-if st.sidebar.button("📊 인원현황", use_container_width=True):
-    st.session_state.menu = "📊 인원현황"
-if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
-    st.session_state.menu = "📈 연도별 인원 통계"
-if st.sidebar.button("🚀 채용현황", use_container_width=True):
-    st.session_state.menu = "🚀 채용현황"
-if st.sidebar.button("🔔 인사팀 업무 공유", use_container_width=True):
-    st.session_state.menu = "🔔 인사팀 업무 공유"
-if st.sidebar.button("😊 임직원 명부", use_container_width=True):
-    st.session_state.menu = "😊 임직원 명부"
-if st.sidebar.button("🔍 연락처/생일 검색", use_container_width=True):
-    st.session_state.menu = "🔍 연락처/생일 검색"
-
-
-st.sidebar.markdown("#### HR Surpport")
-# HR Support 섹션
-if st.sidebar.button("🚀 채용 전형관리", use_container_width=True):
-    st.session_state.menu = "🚀 채용 전형관리"
-if st.sidebar.button("📋 채용 처우협상", use_container_width=True):
-    st.session_state.menu = "📋 채용 처우협상"
-if st.sidebar.button("🏦 기관제출용 인원현황", use_container_width=True):
-    st.session_state.menu = "🏦 기관제출용 인원현황"
-if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
-    st.session_state.menu = "⏰ 초과근무 조회"
-if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
-    st.session_state.menu = "📅 인사발령 내역"
-
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
-with st.sidebar.expander("💡 전사지원"):
-    st.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
-
-st.sidebar.markdown("---")
-
-
-# 로그인된 사용자 정보 표시
+# 로그인된 사용자만 메뉴 표시
 if 'user_info' in st.session_state and st.session_state.user_info is not None:
+    # 제목
+    st.sidebar.title("👥 HRmate")
+    st.sidebar.markdown("---")
 
-    user_name = st.session_state.user_info.get('displayName', '사용자')
+    # HR Data 섹션
+    st.sidebar.markdown("#### HR Data")
     
+    # HR, C-LEVEL, Director 권한 메뉴
+    if check_user_permission(['HR', 'C-LEVEL', 'Director']):
+        if st.sidebar.button("📊 인원현황", use_container_width=True):
+            st.session_state.menu = "📊 인원현황"
+        if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
+            st.session_state.menu = "📈 연도별 인원 통계"
+        if st.sidebar.button("🚀 채용현황", use_container_width=True):
+            st.session_state.menu = "🚀 채용현황"
+        if st.sidebar.button("🔔 인사팀 업무 공유", use_container_width=True):
+            st.session_state.menu = "🔔 인사팀 업무 공유"
+
+    # HR, C-LEVEL 권한 메뉴
+    if check_user_permission(['HR', 'C-LEVEL']):
+        if st.sidebar.button("😊 임직원 명부", use_container_width=True):
+            st.session_state.menu = "😊 임직원 명부"
+        if st.sidebar.button("🏦 기관제출용 인원현황", use_container_width=True):
+            st.session_state.menu = "🏦 기관제출용 인원현황"
+        if st.sidebar.button("🔍 연락처/생일 검색", use_container_width=True):
+            st.session_state.menu = "🔍 연락처/생일 검색"
+
+        st.sidebar.markdown("#### HR Support")
+        if st.sidebar.button("🚀 채용 전형관리", use_container_width=True):
+            st.session_state.menu = "🚀 채용 전형관리"
+        if st.sidebar.button("📋 채용 처우협상", use_container_width=True):
+            st.session_state.menu = "📋 채용 처우협상"
+        if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
+            st.session_state.menu = "⏰ 초과근무 조회"
+        if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
+            st.session_state.menu = "📅 인사발령 내역"
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("<br>", unsafe_allow_html=True)
+        with st.sidebar.expander("💡 전사지원"):
+            st.markdown('<a href="https://neuropr-lwm9mzur3rzbgoqrhzy68n.streamlit.app/" target="_blank" class="sidebar-link" style="text-decoration: none; color: #1b1b1e;">▫️PR(뉴스검색 및 기사초안)</a>', unsafe_allow_html=True)
+    
+    st.sidebar.markdown("---")
+
+    # 로그인된 사용자 정보 표시
+    user_name = st.session_state.user_info.get('displayName', '사용자')
     st.sidebar.markdown(f"**👤접속자 : {user_name}**")
 
     if st.sidebar.button("🚪 로그아웃", use_container_width=True):
@@ -2521,16 +2555,13 @@ def main():
                 with col3:
                     # 🐯 보고 선택 시 HR 권한 확인
                     if selected_status == '🐯 보고예정' or selected_status == '🐯 보고완료':
-                        # 현재 로그인된 사용자의 이메일 확인
-                        user_email = st.session_state.user_info.get('mail', '')
-                        
-                        # 권한 확인
-                        if not check_authorization(user_email):
-                            st.error("🐯권한이 없습니다. 접근이 제한됩니다.")
+                        # HR 권한 확인
+                        if not check_user_permission(['HR']):
+                            st.markdown("<br>🐯 보고 내용은 HR 권한이 있는 사용자만 볼 수 있습니다.", unsafe_allow_html=True)
                             st.stop()
                         else:
-                            st.markdown("<br>🐯권한이 확인되었습니다.", unsafe_allow_html=True)
-                            
+                            st.markdown("<br>🐯 보고 내용을 확인할 수 있습니다.", unsafe_allow_html=True)
+
                 # 추가 필터링
                 filtered_df = status_filtered_df
                 if selected_type_date != '전체':
