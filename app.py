@@ -652,7 +652,7 @@ st.markdown("""
 
 # 로그인된 사용자만 메뉴 표시
 if 'user_info' in st.session_state and st.session_state.user_info is not None:
-    # 제목
+    # 제목 
     st.sidebar.title("👥 HRmate")
     st.sidebar.markdown("---")
 
