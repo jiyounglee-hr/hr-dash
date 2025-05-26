@@ -725,7 +725,7 @@ def main():
                     </div>
                     <div class="title-container">
                         <h1>HRmate</h1>
-                        <p>🔐 아래 버튼을 눌러 Microsoft 계정으로 로그인해 주세요.</p>
+                        <p>🔐 아래 버튼을 눌러 Microsoft 365 계정으로 로그인해 주세요.</p>
                     </div>
                 </div>
                 <div class="divider"><hr></div>
@@ -753,7 +753,7 @@ def main():
             col1, col2, col3 = st.columns([0.1, 0.5, 0.4])
             with col2:
                 st.link_button(
-                    "Microsoft 계정으로 로그인",
+                    "Microsoft 365 계정으로 로그인",
                     auth_url,
                     type="primary",
                     use_container_width=True
@@ -2760,21 +2760,23 @@ def main():
                 st.error(f"연간일정을 불러오는 중 오류가 발생했습니다: {str(e)}")
             st.markdown("<br>", unsafe_allow_html=True)   
             st.markdown("<br>", unsafe_allow_html=True)              
-            st.markdown('''
-            <a href="https://docs.google.com/spreadsheets/d/1KjlfACJIzNLerJQ38ti4VlPbJh3t5gDobpi-wr28zf8/edit?gid=0#gid=0" 
-            target="_blank" 
-            style="
-                text-decoration: none; 
-                color: #1b1b1e;
-                background-color: #f0f2f6;
-                padding: 5px 10px;
-                border-radius: 5px;
-                font-size: 12px;
-                display: inline-block;
-                ">
-                🔗 업무보고 및 주요일정 DB
-            </a>
-            ''', unsafe_allow_html=True)
+            # HR 권한이 있는 경우에만 업무보고 DB 링크 표시
+            if check_user_permission(['HR']):
+                st.markdown('''
+                <a href="https://docs.google.com/spreadsheets/d/1KjlfACJIzNLerJQ38ti4VlPbJh3t5gDobpi-wr28zf8/edit?gid=0#gid=0" 
+                target="_blank" 
+                style="
+                    text-decoration: none; 
+                    color: #1b1b1e;
+                    background-color: #f0f2f6;
+                    padding: 5px 10px;
+                    border-radius: 5px;
+                    font-size: 12px;
+                    display: inline-block;
+                    ">
+                    🔗 업무보고 및 주요일정 DB
+                </a>
+                ''', unsafe_allow_html=True)
 
         # 지원서 관리 메뉴
         elif menu == "🚀 채용 전형관리":
