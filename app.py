@@ -688,6 +688,8 @@ if 'user_info' in st.session_state and st.session_state.user_info is not None:
             st.session_state.menu = "⏰ 초과근무 조회"
         if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
             st.session_state.menu = "📅 인사발령 내역"
+        if st.sidebar.button("💰 스톡옵션 정보", use_container_width=True):
+            st.session_state.menu = "💰 스톡옵션 정보"
         st.sidebar.markdown("---")
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
         with st.sidebar.expander("💡 전사지원"):
@@ -770,7 +772,7 @@ def main():
             
                 # st.link_button을 사용하여 직접 링크로 이동
                 st.link_button(
-                    "Microsoft 계정으로 로그인",
+                    "Microsoft 365 계정으로 로그인",
                     auth_url,
                     type="primary",
                     use_container_width=True
@@ -3417,6 +3419,21 @@ def main():
                     st.warning("지원자 통계 데이터를 불러올 수 없습니다.")
             except Exception as e:
                 st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+
+        if st.sidebar.button("💰 스톡옵션 정보", use_container_width=True):
+            st.session_state.menu = "💰 스톡옵션 정보"
+
+    # 메뉴별 화면 표시
+    if st.session_state.menu == "💰 스톡옵션 정보":
+        st.markdown("## 💰 스톡옵션 정보")
+        st.info("🚧 현재 개발 진행 중인 기능입니다.")
+        st.markdown("### 주요 개발 예정 기능")
+        st.markdown("""
+        - 임직원별 스톡옵션 부여 현황
+        - 스톡옵션 행사 가능 시기 및 조건
+        - 스톡옵션 가치 평가
+        - 행사 신청 및 관리
+        """)
 
 if __name__ == "__main__":
     main()
