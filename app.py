@@ -688,7 +688,7 @@ if 'user_info' in st.session_state and st.session_state.user_info is not None:
             st.session_state.menu = "📅 인사발령 내역"
         if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
             st.session_state.menu = "⏰ 초과근무 조회"
-        if st.sidebar.button("💰 스톡옵션 조회", use_container_width=True):
+        if st.sidebar.button("💰 스톡옵션 조회", use_container_width=True): 
             st.session_state.menu = "💰 스톡옵션 조회"
 
         st.sidebar.markdown("---")
