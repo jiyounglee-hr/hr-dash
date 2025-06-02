@@ -31,6 +31,7 @@ import tempfile
 from PyPDF2 import PdfMerger
 import msal
 from dotenv import load_dotenv
+import xlsxwriter
 
 # 환경 변수 로드
 load_dotenv()
@@ -652,7 +653,7 @@ st.markdown("""
 
 # 로그인된 사용자만 메뉴 표시
 if 'user_info' in st.session_state and st.session_state.user_info is not None:
-    # 제목 
+    # 제목
     st.sidebar.title("👥 HRmate")
     st.sidebar.markdown("---")
 
@@ -669,7 +670,6 @@ if 'user_info' in st.session_state and st.session_state.user_info is not None:
             st.session_state.menu = "🚀 채용현황"
         if st.sidebar.button("🔔 인사팀 업무 공유", use_container_width=True):
             st.session_state.menu = "🔔 인사팀 업무 공유"
-
     # HR, C-LEVEL 권한 메뉴
     if check_user_permission(['HR', 'C-LEVEL']):
         if st.sidebar.button("😊 임직원 명부", use_container_width=True):
@@ -684,12 +684,13 @@ if 'user_info' in st.session_state and st.session_state.user_info is not None:
             st.session_state.menu = "🚀 채용 전형관리"
         if st.sidebar.button("📋 채용 처우협상", use_container_width=True):
             st.session_state.menu = "📋 채용 처우협상"
-        if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
-            st.session_state.menu = "⏰ 초과근무 조회"
         if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
             st.session_state.menu = "📅 인사발령 내역"
-        if st.sidebar.button("💰 스톡옵션 정보", use_container_width=True):
-            st.session_state.menu = "💰 스톡옵션 정보"
+        if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
+            st.session_state.menu = "⏰ 초과근무 조회"
+        if st.sidebar.button("💰 스톡옵션 조회", use_container_width=True):
+            st.session_state.menu = "💰 스톡옵션 조회"
+
         st.sidebar.markdown("---")
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
         with st.sidebar.expander("💡 전사지원"):
@@ -727,7 +728,7 @@ def main():
                     </div>
                     <div class="title-container">
                         <h1>HRmate</h1>
-                        <p>🔐 아래 버튼을 눌러 Microsoft 365 계정으로 로그인해 주세요.</p>
+                        <p>🔐 아래 버튼을 눌러 Microsoft 계정으로 로그인해 주세요.</p>
                     </div>
                 </div>
                 <div class="divider"><hr></div>
@@ -755,7 +756,7 @@ def main():
             col1, col2, col3 = st.columns([0.1, 0.5, 0.4])
             with col2:
                 st.link_button(
-                    "Microsoft 365 계정으로 로그인",
+                    "Microsoft 계정으로 로그인",
                     auth_url,
                     type="primary",
                     use_container_width=True
@@ -772,7 +773,7 @@ def main():
             
                 # st.link_button을 사용하여 직접 링크로 이동
                 st.link_button(
-                    "Microsoft 365 계정으로 로그인",
+                    "Microsoft 계정으로 로그인",
                     auth_url,
                     type="primary",
                     use_container_width=True
@@ -2762,23 +2763,21 @@ def main():
                 st.error(f"연간일정을 불러오는 중 오류가 발생했습니다: {str(e)}")
             st.markdown("<br>", unsafe_allow_html=True)   
             st.markdown("<br>", unsafe_allow_html=True)              
-            # HR 권한이 있는 경우에만 업무보고 DB 링크 표시
-            if check_user_permission(['HR']):
-                st.markdown('''
-                <a href="https://docs.google.com/spreadsheets/d/1KjlfACJIzNLerJQ38ti4VlPbJh3t5gDobpi-wr28zf8/edit?gid=0#gid=0" 
-                target="_blank" 
-                style="
-                    text-decoration: none; 
-                    color: #1b1b1e;
-                    background-color: #f0f2f6;
-                    padding: 5px 10px;
-                    border-radius: 5px;
-                    font-size: 12px;
-                    display: inline-block;
-                    ">
-                    🔗 업무보고 및 주요일정 DB
-                </a>
-                ''', unsafe_allow_html=True)
+            st.markdown('''
+            <a href="https://docs.google.com/spreadsheets/d/1KjlfACJIzNLerJQ38ti4VlPbJh3t5gDobpi-wr28zf8/edit?gid=0#gid=0" 
+            target="_blank" 
+            style="
+                text-decoration: none; 
+                color: #1b1b1e;
+                background-color: #f0f2f6;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 12px;
+                display: inline-block;
+                ">
+                🔗 업무보고 및 주요일정 DB
+            </a>
+            ''', unsafe_allow_html=True)
 
         # 지원서 관리 메뉴
         elif menu == "🚀 채용 전형관리":
@@ -3420,20 +3419,313 @@ def main():
             except Exception as e:
                 st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
 
-        if st.sidebar.button("💰 스톡옵션 정보", use_container_width=True):
-            st.session_state.menu = "💰 스톡옵션 정보"
+        elif menu == "💰 스톡옵션 조회":
+            st.markdown("##### 💰 스톡옵션 조회")
+            
+            # 검색 입력 필드 스타일 추가
+            st.markdown("""
+            <style>
+            /* 검색 입력 필드 스타일 */
+            [data-testid="stTextInput"] input {
+                background-color: #eee;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            uploaded_file = st.file_uploader("스톡옵션 엑셀 파일을 업로드해주세요", type=['xlsx', 'xls']) 
+            
+            if uploaded_file is not None:
+                try:
+                    # 엑셀 파일 읽기
+                    stock_option_info = pd.read_excel(uploaded_file, sheet_name='스톡옵션안내')
+                    stock_option_code = pd.read_excel(uploaded_file, sheet_name='ST코드')
+                    
+                    # 컬럼명을 문자열로 변환
+                    stock_option_info.columns = stock_option_info.columns.astype(str)
+                    stock_option_code.columns = stock_option_code.columns.astype(str)
+                    
+                    # 재직 중인 직원만 필터링
+                    stock_option_info['재직상태'] = stock_option_info['재직상태'].fillna('').astype(str)
+                    active_employees = stock_option_info[~stock_option_info['재직상태'].str.contains('퇴직', na=False)]
+                    
+                    # 결과를 저장할 리스트
+                    result_data = []
+                    
+                    # L열(12번째 컬럼)부터의 ST 코드 컬럼들
+                    st_columns = active_employees.columns[11:] 
+                    
+                    # 각 직원에 대해 처리
+                    for _, employee in active_employees.iterrows():
+                        employee_info = {
+                            '성명': str(employee.get('성명', '')),
+                            '재직상태': str(employee.get('재직상태', '')),
+                            '본부': str(employee.get('본부', '')),
+                            '팀': str(employee.get('팀', '')),
+                            '직책': str(employee.get('직책', '')),
+                            '합계': 0,
+                            '스톡옵션내역': []
+                        }
+                         
+                        # ST 코드별 스톡옵션 처리
+                        for col in st_columns:
+                            try:
+                                # 스톡옵션 수량이 있는 경우만 처리
+                                quantity = pd.to_numeric(employee[col], errors='coerce')
+                                if pd.isna(quantity) or quantity <= 0:
+                                    continue
+                                
+                                # ST 코드 정보 찾기
+                                st_code_info = stock_option_code[stock_option_code['회차구분'].astype(str) == str(col)]
+                                if st_code_info.empty:
+                                    continue
+                                
+                                st_info = st_code_info.iloc[0]
+                                
+                                # 날짜 처리
+                                start_date = pd.to_datetime(st_info['행사시작일'], errors='coerce')
+                                end_date = pd.to_datetime(st_info['행사종료일'], errors='coerce')
+                                
+                                start_date_str = start_date.strftime('%Y-%m-%d') if pd.notna(start_date) else '날짜 없음'
+                                end_date_str = end_date.strftime('%Y-%m-%d') if pd.notna(end_date) else '날짜 없음'
+                                
+                                # 행사금액과 행사가능비율 처리
+                                exercise_price = pd.to_numeric(st_info.get('행사금액', 0), errors='coerce')
+                                exercise_ratio = pd.to_numeric(st_info.get('행사가능 비율', 0), errors='coerce')
+                                
+                                option_info = {
+                                    '구분': str(st_info.get('구분', '')),
+                                    '회차': str(col),
+                                    '행사기간': f"{start_date_str}~{end_date_str}",
+                                    '행사가능비율': f"{int(exercise_ratio * 100)}%",
+                                    '행사금액': f"{int(exercise_price):,}원",
+                                    '부여주식': f"{int(quantity):,}주",
+                                    '금액합계': f"{int(exercise_price * quantity):,}원"
+                                }
+                                
+                                employee_info['스톡옵션내역'].append(option_info)
+                                employee_info['합계'] += quantity
+                                
+                            except Exception as e:
+                                st.warning(f"데이터 처리 중 오류: {str(e)}")
+                                continue
+                        
+                        if employee_info['스톡옵션내역']:
+                            result_data.append(employee_info)
+                    
+                    # 결과 데이터프레임 생성
+                    if result_data:
+                        df = pd.DataFrame(result_data)
+                        
+                        # "합계" 행 제외
+                        df = df[df['성명'] != '합계']
+                        
+                        # 엑셀 다운로드를 위한 데이터 준비
+                        excel_data = []
+                        for _, row in df.iterrows():
+                            # 기본 정보 행
+                            basic_info = f"{row['성명']} ({row['본부']} / {row['팀']} / {row['직책']})"
+                            
+                            # 총계 정보 행
+                            total_amount = sum(int(option['금액합계'].replace('원', '').replace(',', '')) for option in row['스톡옵션내역'])
+                            total_info = f"총 주식수: {int(row['합계']):,}주 | 총 금액: {total_amount:,}원"
+                            
+                            # 스톡옵션 상세 내역
+                            stock_options = []
+                            current_group = None
+                            for option in row['스톡옵션내역']:
+                                if option['구분'] != current_group:
+                                    if current_group is not None:
+                                        excel_data.append(['', '', ''])  # 구분 사이 빈 줄 추가
+                                    stock_options.append(f"[{option['구분']}]")
+                                    current_group = option['구분']
+                                
+                                option_detail = (
+                                    f"회차: {option['회차']}, "
+                                    f"행사기간: {option['행사기간']}, "
+                                    f"행사비율: {option['행사가능비율']}, "
+                                    f"주식수: {option['부여주식']}, "
+                                    f"행사금액: {option['행사금액']}, "
+                                    f"금액합계: {option['금액합계']}"
+                                )
+                                stock_options.append(option_detail)
+                            
+                            # 첫 번째 행 추가
+                            excel_data.append([basic_info, total_info, stock_options[0] if stock_options else ''])
+                            
+                            # 나머지 스톡옵션 정보 행 추가
+                            for option_info in stock_options[1:]:
+                                excel_data.append(['', '', option_info])
+                            
+                            # 직원 사이 구분선 추가
+                            excel_data.append(['', '', ''])
+                        
+                        # 데이터프레임 생성
+                        excel_df = pd.DataFrame(excel_data, columns=['기본정보', '총계정보', '스톡옵션 상세'])
+                        
+                        # 엑셀 파일로 변환
+                        buffer = io.BytesIO()
+                        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                            excel_df.to_excel(writer, sheet_name='스톡옵션현황', index=False)
+                            
+                            # 워크북과 워크시트 가져오기
+                            workbook = writer.book
+                            worksheet = writer.sheets['스톡옵션현황']
+                            
+                            # 셀 포맷 정의
+                            header_format = workbook.add_format({
+                                'bold': True,
+                                'bg_color': '#D9D9D9',
+                                'border': 1,
+                                'align': 'center',
+                                'valign': 'vcenter'
+                            })
+                            
+                            cell_format = workbook.add_format({
+                                'align': 'left',
+                                'valign': 'vcenter',
+                                'text_wrap': True
+                            })
+                            
+                            # 열 너비 설정
+                            worksheet.set_column('A:A', 40)  # 기본정보
+                            worksheet.set_column('B:B', 40)  # 총계정보
+                            worksheet.set_column('C:C', 80)  # 스톡옵션 상세
+                            
+                            # 헤더 포맷 적용
+                            for col_num, value in enumerate(excel_df.columns.values):
+                                worksheet.write(0, col_num, value, header_format)
+                            
+                            # 데이터 포맷 적용
+                            for row_num in range(len(excel_df)):
+                                for col_num in range(len(excel_df.columns)):
+                                    worksheet.write(row_num + 1, col_num, excel_df.iloc[row_num, col_num], cell_format)
+                            
+                            # 검색 기능 추가
+                            search_name = st.text_input('이름으로 검색', '', key='stock_option_search')
 
-    # 메뉴별 화면 표시
-    if st.session_state.menu == "💰 스톡옵션 정보":
-        st.markdown("## 💰 스톡옵션 정보")
-        st.info("🚧 현재 개발 진행 중인 기능입니다.")
-        st.markdown("### 주요 개발 예정 기능")
-        st.markdown("""
-        - 임직원별 스톡옵션 부여 현황
-        - 스톡옵션 행사 가능 시기 및 조건
-        - 스톡옵션 가치 평가
-        - 행사 신청 및 관리
-        """)
+                            # 엑셀 다운로드용 데이터프레임 생성
+                            download_data = []
+                            
+                            for _, row in df.iterrows():
+                                total_amount = sum(int(option['금액합계'].replace('원', '').replace(',', '')) for option in row['스톡옵션내역'])
+                                
+                                # 스톡옵션 상세 내역 문자열 생성
+                                details = []
+                                current_group = None
+                                
+                                for option in row['스톡옵션내역']:
+                                    if option['구분'] != current_group:
+                                        details.append(f"\n[{option['구분']}]")
+                                        current_group = option['구분']
+                                    
+                                    details.append(
+                                        f"회차: {option['회차']}, "
+                                        f"행사기간: {option['행사기간']}, "
+                                        f"행사비율: {option['행사가능비율']}, "
+                                        f"주식수: {option['부여주식']}, "
+                                        f"행사금액: {option['행사금액']}, "
+                                        f"금액합계: {option['금액합계']}"
+                                    )
+                                
+                                download_data.append({
+                                    '임직원 정보': f"{row['성명']} ({row['본부']} / {row['팀']} / {row['직책']})",
+                                    '총계': f"총 주식수: {int(row['합계']):,}주 | 총 금액: {total_amount:,}원",
+                                    '스톡옵션 상세내역': '\n'.join(details)
+                                })
+                            
+                            # 데이터프레임 생성 및 엑셀 변환
+                            download_df = pd.DataFrame(download_data)
+                            buffer = io.BytesIO()
+                            
+                            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                                download_df.to_excel(writer, index=False, sheet_name='스톡옵션현황')
+                                workbook = writer.book
+                                worksheet = writer.sheets['스톡옵션현황']
+                                
+                                # 포맷 설정
+                                header_format = workbook.add_format({
+                                    'bold': True,
+                                    'bg_color': '#D9D9D9',
+                                    'border': 1,
+                                    'align': 'center',
+                                    'valign': 'vcenter'
+                                })
+                                
+                                cell_format = workbook.add_format({
+                                    'align': 'left',
+                                    'valign': 'vcenter',
+                                    'text_wrap': True
+                                })
+                                
+                                # 열 너비 설정
+                                worksheet.set_column('A:A', 40)
+                                worksheet.set_column('B:B', 40)
+                                worksheet.set_column('C:C', 80)
+                                
+                                # 행 높이 설정
+                                worksheet.set_default_row(30)
+                                
+                                # 헤더 포맷 적용
+                                for col_num, value in enumerate(download_df.columns.values):
+                                    worksheet.write(0, col_num, value, header_format)
+                                
+                                # 데이터 포맷 적용
+                                for row_num in range(len(download_df)):
+                                    for col_num in range(len(download_df.columns)):
+                                        worksheet.write(row_num + 1, col_num, download_df.iloc[row_num, col_num], cell_format)
+                            
+                            # 다운로드 버튼 배치
+                            st.download_button(
+                                label="📥 전체 스톡옵션 현황 다운로드",
+                                data=buffer.getvalue(),
+                                file_name="스톡옵션_전체현황.xlsx",
+                                mime="application/vnd.ms-excel",
+                                key='stock_option_download'
+                            )
+
+                            # 검색 결과 표시
+                            if search_name:
+                                filtered_df = df[df['성명'].str.contains(search_name, case=False, na=False)]
+                            else:
+                                filtered_df = df
+                            
+                            # 각 직원의 스톡옵션 정보 표시
+                            for _, row in filtered_df.iterrows():
+                                with st.expander(f"{row['성명']} ({row['본부']} / {row['팀']} / {row['직책']})"):
+                                    # 총 금액 계산
+                                    total_amount = sum(int(option['금액합계'].replace('원', '').replace(',', '')) for option in row['스톡옵션내역'])
+                                    st.write(f"**총 주식수:** {int(row['합계']):,}주  |  **총 금액:** {total_amount:,}원")
+                                    st.markdown("---")
+                                    st.markdown("**스톡옵션 상세 내역**")
+                                    
+                                    current_group = None
+                                    for option in row['스톡옵션내역']:
+                                        if option['구분'] != current_group:
+                                            st.markdown(f"**{option['구분']}**")
+                                            current_group = option['구분']
+                                        
+                                        cols = st.columns([1, 2, 1, 1, 1.5, 2])
+                                        cols[0].write(f"회차: {option['회차']}")
+                                        cols[1].write(f"행사기간: {option['행사기간']}")
+                                        cols[2].write(f"행사비율: {option['행사가능비율']}")
+                                        cols[3].write(f"주식수: {option['부여주식']}")
+                                        cols[4].write(f"행사금액: {option['행사금액']}")
+                                        cols[5].write(f"금액합계: {option['금액합계']}")
+
+                            # 다운로드 버튼 추가
+                            st.download_button(
+                                label="📥 전체 스톡옵션 현황 다운로드", 
+                                data=buffer.getvalue(),
+                                file_name="스톡옵션_전체현황.xlsx",
+                                mime="application/vnd.ms-excel"
+                            )
+                    else:
+                        st.warning("처리할 스톡옵션 데이터가 없습니다.") 
+                        
+                except Exception as e:
+                    st.error(f"파일 처리 중 오류가 발생했습니다: {str(e)}")
+            else:
+                st.info("엑셀 파일을 업로드해주세요. ('스톡옵션안내'와 'ST코드' 시트가 필요합니다)")
 
 if __name__ == "__main__":
     main()
