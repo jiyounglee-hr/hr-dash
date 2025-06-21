@@ -32,9 +32,15 @@ from PyPDF2 import PdfMerger
 import msal
 from dotenv import load_dotenv
 import xlsxwriter
+from PIL import Image, ImageDraw, ImageFont
+
+# === ✅ 로고 파일 경로 ===
+FRONT_LOGO_URL = "assets/FRONTLOGO.png"
+BACK_LOGO_URL = "assets/BACKLOGO.png"
+
 
 # 환경 변수 로드
-load_dotenv()
+load_dotenv() 
 
 # Microsoft Azure AD 설정
 CLIENT_ID = st.secrets["AZURE_AD_CLIENT_ID"]
@@ -684,12 +690,15 @@ if 'user_info' in st.session_state and st.session_state.user_info is not None:
             st.session_state.menu = "🚀 채용 전형관리"
         if st.sidebar.button("📋 채용 처우협상", use_container_width=True):
             st.session_state.menu = "📋 채용 처우협상"
+        if st.sidebar.button("🎫 명함발급", use_container_width=True): 
+            st.session_state.menu = "🎫 명함발급"
         if st.sidebar.button("📅 인사발령 내역", use_container_width=True):
             st.session_state.menu = "📅 인사발령 내역"
         if st.sidebar.button("⏰ 초과근무 조회", use_container_width=True):
             st.session_state.menu = "⏰ 초과근무 조회"
         if st.sidebar.button("💰 스톡옵션 조회", use_container_width=True): 
             st.session_state.menu = "💰 스톡옵션 조회"
+
 
         st.sidebar.markdown("---")
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
@@ -2818,7 +2827,7 @@ def main():
             """, unsafe_allow_html=True)
             st.markdown("###### 📝 채용 관리 시스템")
             
-            with st.expander("👇 링크 바로가기 "):
+            with st.expander("👇 링크 바로가기 ", expanded=True):
                 # 1. 지원자 접수
                 st.markdown('<div class="category-title">1️⃣ 채용공고 관리</div>', unsafe_allow_html=True)
                 st.markdown('<div class="link-container">', unsafe_allow_html=True)
@@ -3716,6 +3725,252 @@ def main():
                     st.error(f"파일 처리 중 오류가 발생했습니다: {str(e)}")
             else:
                 st.info("엑셀 파일을 업로드해주세요. ('스톡옵션안내'와 'ST코드' 시트가 필요합니다)")
+
+
+
+        elif menu == "📊 인사 통계":
+            st.markdown("##### 📊 인사 통계")
+            
+            # 인사 통계 데이터 로드
+            @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+            def load_hr_stats():
+                try:
+                    # 현재 디렉토리에서 엑셀 파일 경로 설정
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
+                    
+                    # 엑셀 파일에서 "인사-통계" 시트 읽기
+                    df = pd.read_excel(file_path, sheet_name="인사-통계")
+                    
+                    # 컬럼 이름 재정의
+                    df.columns = df.columns.str.strip()
+                    
+                    return df
+                except Exception as e:
+                    st.error(f"인사 통계 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+                    return None
+
+            # 데이터 로드
+            hr_stats_df = load_hr_stats()
+            
+            if hr_stats_df is not None and not hr_stats_df.empty:
+                # 인사 통계 데이터 표시
+                st.dataframe(hr_stats_df, use_container_width=True)
+            else:
+                st.warning("인사 통계 데이터를 불러올 수 없습니다.")
+
+        elif menu == "🎫 명함발급":
+            st.markdown("##### 🎫 명함발급")
+            
+            # 명함 신청서 데이터 로드
+            application_df = load_business_card_application_data()
+            
+            if application_df is not None:
+                
+                # 표시할 컬럼 선택
+                columns_to_display = [
+                    'Id',
+                    '완료 시간',
+                    '발급확인',
+                    '명함에 들어갈 성명(한글)을 입력해 주세요',
+                    '명함 신청 사유를 선택해 주세요.',
+                    '명함 수량을 선택해주세요.',
+                    '기존 명함에서 변경사항이 있나요?',
+                    '내선번호가 있다면 적어주세요. 없는 경우 회사 대표전화로 기입됩니다.',
+                    '명함 수령 소요 기간을 선택해주세요.',
+                    '추가 요청사항이 있다면 적어주세요.\n'
+                ] 
+                
+                # 선택한 컬럼만 포함하는 데이터프레임 생성 및 정렬
+                display_df = application_df[columns_to_display].copy()
+                display_df['완료 시간'] = pd.to_datetime(display_df['완료 시간'])
+                display_df = display_df.sort_values('완료 시간', ascending=False)
+                with st.expander("👇 링크 바로가기 ", expanded=True):
+                    # 명함처리에 필요한 링크
+                    st.markdown('<div class="link-container">', unsafe_allow_html=True)
+                    st.markdown('<a href="https://neurophet.sharepoint.com/:x:/r/sites/team.hr/_layouts/15/Doc.aspx?sourcedoc=%7B60F4F599-B216-4DEA-B71E-A9F944670929%7D&file=%EB%AA%85%ED%95%A8%20%EC%8B%A0%EC%B2%AD.xlsx&action=default&mobileredirect=true" target="_blank" class="link-hover">▫️[엑셀] 명함신청 및 명함 DB</a> : 명함신청내용 및 현재 명함상태를 확인해 주세요. ' , unsafe_allow_html=True)
+                    st.markdown('<a href="https://www.figma.com/design/UhSxGkUptjMwBv9tKBaQeL/HR-Branding?node-id=0-1&p=f&t=SSggzLCn4B9XuvX3-0" target="_blank" class="link-hover">▫️[피그마] 명함 디자인</a> : 이름을 검색해서 명함을 인쇄할 대상을 선택하고 Export를 3배사이즈로 해서 업체 주문 ', unsafe_allow_html=True)
+                    st.markdown('<a href="https://docs.google.com/spreadsheets/d/1Ses2I0A0oZ2Womneq6u6WjxeJ3gWcnOMYta_WDWUYPg/edit?gid=0#gid=0" target="_blank" class="link-hover">▫️[구글시트] 피그마 자동 싱크</a> : 명함 DB가 변경된 경우 구글에 업데이트 후 피그마에서 싱크를 진행합니다. ', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)                
+                # 명함 신청서 리스트 표시
+                st.markdown("##### 📋 명함 신청서 리스트")
+                st.dataframe(
+                    display_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Id": st.column_config.NumberColumn(
+                            "ID",
+                            width=5
+                        ),
+                        "완료 시간": st.column_config.DatetimeColumn(
+                            "신청일시",
+                            width=40,
+                            format="YYYY-MM-DD HH:mm"
+                        ),
+                        "발급확인": st.column_config.TextColumn(
+                            "발급확인",
+                            width=20
+                        ),
+                        "명함에 들어갈 성명(한글)을 입력해 주세요": st.column_config.TextColumn(
+                            "신청자",
+                            width=10
+                        ),
+                        "명함 신청 사유를 선택해 주세요.": st.column_config.TextColumn(
+                            "신청사유",
+                            width="small"
+                        ),
+                        "명함 수량을 선택해주세요.": st.column_config.TextColumn(
+                            "수량",
+                            width="small"
+                        ),
+                        "기존 명함에서 변경사항이 있나요?": st.column_config.TextColumn(
+                            "변경여부",
+                            width="small"
+                        ),
+
+                        "내선번호가 있다면 적어주세요. 없는 경우 회사 대표전화로 기입됩니다.": st.column_config.TextColumn(
+                            "내선번호",
+                            width="small"
+                        ),
+                        "명함 수령 소요 기간을 선택해주세요.": st.column_config.TextColumn(
+                            "수령기간",
+                            width="small"
+                        ),
+                        "추가 요청사항이 있다면 적어주세요.\n": st.column_config.TextColumn(
+                            "추가요청",
+                            width="medium"
+                        )
+                    }
+                )
+                
+                st.markdown("---")  # 구분선 추가
+            else:
+                st.error("명함 신청서 데이터를 불러올 수 없습니다.")
+            
+            # 명함 데이터 로드
+            business_card_df = load_business_card_data()
+            
+            if business_card_df is not None:
+                # 전체 명함DB 리스트 표시
+                st.markdown("##### 📋 명함DB 리스트")
+                st.dataframe(
+                    business_card_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.error("명함 데이터를 불러올 수 없습니다.")
+
+@st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+def load_business_card_application_data():
+    """SharePoint에서 명함 신청서 데이터를 로드하는 함수"""
+    try:
+        # MSAL 설정
+        authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
+        app = msal.ConfidentialClientApplication(
+            client_id=st.secrets['AZURE_AD_CLIENT_ID'],
+            client_credential=st.secrets['AZURE_AD_CLIENT_SECRET'],
+            authority=authority
+        )
+
+        # 토큰 받기
+        scopes = ["https://graph.microsoft.com/.default"]
+        result = app.acquire_token_for_client(scopes=scopes)
+        
+        if "access_token" not in result:
+            st.error("토큰을 받아오는데 실패했습니다.")
+            return None
+            
+        access_token = result['access_token']
+
+        # SharePoint 사이트 정보 가져오기
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        # 사이트 정보 가져오기 (neurophet.sharepoint.com의 team.hr 사이트)
+        site_response = requests.get(
+            "https://graph.microsoft.com/v1.0/sites/neurophet.sharepoint.com:/sites/team.hr",
+            headers=headers
+        )
+        site_response.raise_for_status()
+        site_info = site_response.json()
+        
+        # 파일 경로로 파일 검색
+        drive_items = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/명함 신청.xlsx",
+            headers=headers
+        )
+        drive_items.raise_for_status()
+        file_info = drive_items.json()
+        
+        # 파일 다운로드
+        download_url = file_info['@microsoft.graph.downloadUrl']
+        file_response = requests.get(download_url)
+        file_response.raise_for_status()
+
+        # BytesIO로 읽어 DataFrame 반환
+        df = pd.read_excel(BytesIO(file_response.content), sheet_name="신청리스트_폼즈")
+        
+        return df
+    except Exception as e:
+        st.error(f"명함 신청서 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+        return None
+
+@st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+def load_business_card_data():
+    """SharePoint에서 명함 데이터를 로드하는 함수"""
+    try:
+        # MSAL 설정
+        authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
+        app = msal.ConfidentialClientApplication(
+            client_id=st.secrets['AZURE_AD_CLIENT_ID'],
+            client_credential=st.secrets['AZURE_AD_CLIENT_SECRET'],
+            authority=authority
+        )
+
+        # 토큰 받기
+        scopes = ["https://graph.microsoft.com/.default"]
+        result = app.acquire_token_for_client(scopes=scopes)
+        
+        if "access_token" not in result:
+            st.error("토큰을 받아오는데 실패했습니다.")
+            return None
+            
+        access_token = result['access_token']
+
+        # SharePoint 사이트 정보 가져오기
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        # 사이트 정보 가져오기 (neurophet.sharepoint.com의 team.hr 사이트)
+        site_response = requests.get(
+            "https://graph.microsoft.com/v1.0/sites/neurophet.sharepoint.com:/sites/team.hr",
+            headers=headers
+        )
+        site_response.raise_for_status()
+        site_info = site_response.json()
+        
+        # 파일 경로로 파일 검색
+        drive_items = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/명함 신청.xlsx",
+            headers=headers
+        )
+        drive_items.raise_for_status()
+        file_info = drive_items.json()
+        
+        # 파일 다운로드
+        download_url = file_info['@microsoft.graph.downloadUrl']
+        file_response = requests.get(download_url)
+        file_response.raise_for_status()
+
+        # BytesIO로 읽어 DataFrame 반환
+        df = pd.read_excel(BytesIO(file_response.content), sheet_name="명함DB")
+        
+        return df
+    except Exception as e:
+        st.error(f"명함 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+        return None
 
 if __name__ == "__main__":
     main()
