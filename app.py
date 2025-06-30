@@ -1602,7 +1602,13 @@ def main():
                      (df['퇴사일'] == pd.Timestamp('2050-12-31')) | 
                      (df['퇴사일'] >= last_day))
                 ]
-                
+                # '구분1', '구분2', '구분3', '성명'이 '0'인 행 제외
+                current_employees = current_employees[
+                    (current_employees['구분1'] != '0') &
+                    (current_employees['구분2'] != '0') &
+                    (current_employees['구분3'] != '0') &
+                    (current_employees['성명'] != '0')
+                ].copy()
                 st.markdown("---")
                 
                 if not df[df['입사일'] <= last_day].empty:
