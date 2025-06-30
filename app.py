@@ -47,7 +47,7 @@ CLIENT_ID = st.secrets["AZURE_AD_CLIENT_ID"]
 TENANT_ID = st.secrets["AZURE_AD_TENANT_ID"]
 CLIENT_SECRET = st.secrets["AZURE_AD_CLIENT_SECRET"]
 # 팀즈 호환성을 위해 REDIRECT_URI를 명확하게 설정
-REDIRECT_URI = "https://hrmatetest.streamlit.app/"
+REDIRECT_URI = "https://hrmate.streamlit.app/"
 
 # MSAL 앱 초기화
 msal_app = msal.ConfidentialClientApplication(
