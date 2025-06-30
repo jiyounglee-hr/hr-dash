@@ -536,6 +536,14 @@ def load_data():
         # 엑셀 파일 읽기
         df = pd.read_excel(file_path)
         
+        # '0' 값 필터링
+        df = df[
+            (df['구분1'].astype(str) != '0') &
+            (df['구분2'].astype(str) != '0') &
+            (df['구분3'].astype(str) != '0') &
+            (df['성명'].astype(str) != '0')
+        ].copy()
+        
         # 데이터 로드 시간 표시 (한국 시간대 적용)
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
         kst_time = datetime.fromtimestamp(last_modified, pytz.timezone('Asia/Seoul'))
