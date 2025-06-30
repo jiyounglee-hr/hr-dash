@@ -540,8 +540,63 @@ def get_user_permission(email):
     :return: 권한명 (권한이 없으면 None)
     """
     try:
-        df = pd.read_excel('임직원 기초 데이터.xlsx', sheet_name='hrmate권한')
+        # MSAL 설정
+        authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
+        app = msal.ConfidentialClientApplication(
+            client_id=st.secrets['AZURE_AD_CLIENT_ID'],
+            client_credential=st.secrets['AZURE_AD_CLIENT_SECRET'],
+            authority=authority
+        )
+
+        # 토큰 받기
+        scopes = ["https://graph.microsoft.com/.default"]
+        result = app.acquire_token_for_client(scopes=scopes)
         
+        if "access_token" not in result:
+            st.error("토큰을 받아오는데 실패했습니다.")
+            return None
+            
+        access_token = result['access_token']
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        # 사이트 정보 가져오기
+        site_response = requests.get(
+            "https://graph.microsoft.com/v1.0/sites/neurophet.sharepoint.com:/sites/team.hr",
+            headers=headers
+        )
+        site_response.raise_for_status()
+        site_info = site_response.json()
+        
+        # 파일 경로 설정
+        file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+        
+        # 파일 정보 가져오기
+        drive_response = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive",
+            headers=headers
+        )
+        drive_response.raise_for_status()
+        drive_info = drive_response.json()
+        
+        # 파일 다운로드 URL 가져오기
+        file_response = requests.get(
+            f"https://graph.microsoft.com/v1.0/drives/{drive_info['id']}/root:/{file_path}",
+            headers=headers
+        )
+        file_response.raise_for_status()
+        file_info = file_response.json()
+        
+        # 파일 다운로드
+        download_response = requests.get(
+            file_info['@microsoft.graph.downloadUrl']
+        )
+        download_response.raise_for_status()
+        
+        # 엑셀 파일 읽기
+        excel_data = io.BytesIO(download_response.content)
+        df = pd.read_excel(excel_data, sheet_name='hrmate권한')
+        
+        # 이메일로 사용자 찾기
         user_row = df[df['이메일'].str.lower().str.strip() == email.lower().strip()]
         
         if not user_row.empty and '권한명' in user_row.columns:
@@ -564,7 +619,7 @@ def check_user_permission(required_permissions):
     user_email = st.session_state.user_info.get('mail', '')  # 'email' 대신 'mail' 사용
     user_permission = get_user_permission(user_email)
     
-    
+    # 사용자의 권한이 required_permissions 리스트에 하나라도 있으면 True 반환
     return user_permission in required_permissions if user_permission else False
 
 # 로그인 확인 - 제거
