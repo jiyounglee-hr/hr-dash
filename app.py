@@ -47,7 +47,7 @@ CLIENT_ID = st.secrets["AZURE_AD_CLIENT_ID"]
 TENANT_ID = st.secrets["AZURE_AD_TENANT_ID"]
 CLIENT_SECRET = st.secrets["AZURE_AD_CLIENT_SECRET"]
 # 팀즈 호환성을 위해 REDIRECT_URI를 명확하게 설정
-REDIRECT_URI = "https://hrmate.streamlit.app/"
+REDIRECT_URI = "https://hrmatetest.streamlit.app/"
 
 # MSAL 앱 초기화
 msal_app = msal.ConfidentialClientApplication(
@@ -1132,7 +1132,7 @@ def main():
                     st.info("2025년 입사 예정자가 없습니다.")
 
             with list_col2:
-                st.markdown("###### 2025년 퇴사자")
+                st.markdown("###### 2025년 퇴사자(예정자 포함)")
                 퇴사자_df = df[df['퇴사연도'] == 2025][['성명', '팀', '직위', '퇴사일']]
                 if not 퇴사자_df.empty:
                     퇴사자_df = 퇴사자_df.sort_values('퇴사일', ascending=False)  # 내림차순 정렬
@@ -3520,7 +3520,7 @@ def main():
                         
                         # 면접일시 컬럼 생성 (면접일자와 시간 조합)
                         df['면접일시'] = df.apply(
-                            lambda row: f"{row['면접일자'].strftime('%Y-%m-%d')} {row['시간']}" if pd.notna(row['면접일자']) else '',
+                            lambda row: f"{row['면접일자'].strftime('%Y-%m-%d')} {row['면접시간']}" if pd.notna(row['면접일자']) else '',
                             axis=1
                         )
                     
@@ -3614,8 +3614,7 @@ def main():
             
             # 지원자 통계 데이터 로드
             @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
-            def load_applicant_stats_data():
-                """SharePoint에서 지원자 통계 데이터를 로드하는 함수"""
+            def load_applicant_stats():
                 try:
                     # MSAL 설정
                     authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
@@ -3646,36 +3645,47 @@ def main():
                     
                     # 파일 경로 설정
                     file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
-                    drive_items = requests.get(
-                        f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
+                    
+                    # 파일 정보 가져오기
+                    drive_response = requests.get(
+                        f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive",
                         headers=headers
                     )
-                    drive_items.raise_for_status()
-                    file_info = drive_items.json()
+                    drive_response.raise_for_status()
+                    drive_info = drive_response.json()
+                    
+                    # 파일 다운로드 URL 가져오기
+                    file_response = requests.get(
+                        f"https://graph.microsoft.com/v1.0/drives/{drive_info['id']}/root:/{file_path}",
+                        headers=headers
+                    )
+                    file_response.raise_for_status()
+                    file_info = file_response.json()
                     
                     # 파일 다운로드
-                    download_url = file_info['@microsoft.graph.downloadUrl']
-                    file_response = requests.get(download_url)
-                    file_response.raise_for_status()
-
-                    # "채용-지원자" 시트 읽기
-                    df = pd.read_excel(BytesIO(file_response.content), sheet_name="채용-지원자")
+                    download_response = requests.get(
+                        file_info['@microsoft.graph.downloadUrl']
+                    )
+                    download_response.raise_for_status()
                     
-                    # 지원일자 컬럼 변환
-                    if '지원일자' in df.columns:
-                        df['지원일자'] = pd.to_datetime(df['지원일자'], errors='coerce')
+                    # 엑셀 파일 읽기
+                    excel_data = io.BytesIO(download_response.content)
+                    df = pd.read_excel(excel_data, sheet_name="채용-지원자")
                     
-                    # 변환 실패한 데이터 제거
-                    df = df.dropna(subset=['지원일자'])
+                    # 성명이 0인 행 제거
+                    df = df[df['성명'] != 0]
+                    df = df[df['성명'] != '0']
+                    
+                    # 등록날짜에서 연도 추출
+                    df['지원연도'] = pd.to_datetime(df['등록날짜']).dt.year
                     
                     return df
-
                 except Exception as e:
                     st.error(f"지원자 통계 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
                     return None
 
             # 데이터 로드
-            applicant_df = load_applicant_stats_data()
+            applicant_df = load_applicant_stats()
             
             if applicant_df is not None and len(applicant_df) > 0:
                 # 연도 선택
@@ -3776,17 +3786,6 @@ def main():
             else: 
                 st.warning("지원자 통계 데이터를 불러올 수 없습니다.")
  
-            # 지원자 통계
-            st.markdown("### 📊 지원자 통계")
-            try:
-                applicant_stats_df = load_applicant_stats_data()
-                if applicant_stats_df is not None and not applicant_stats_df.empty:
-                    # 지원자 통계 데이터 표시
-                    st.dataframe(applicant_stats_df, use_container_width=True)
-                else:
-                    st.warning("지원자 통계 데이터를 불러올 수 없습니다.")
-            except Exception as e:
-                st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
 
         elif menu == "💰 스톡옵션 조회":
             st.markdown("##### 💰 스톡옵션 조회")
