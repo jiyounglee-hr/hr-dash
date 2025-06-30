@@ -3522,7 +3522,7 @@ def main():
                         df['면접일시'] = df.apply(
                             lambda row: f"{row['면접일자'].strftime('%Y-%m-%d')} {row['면접시간']}" if pd.notna(row['면접일자']) else '',
                             axis=1
-                        )
+                        ) 
                     
                     # 변환 실패한 데이터 제거
                     df = df.dropna(subset=['면접일자'])
