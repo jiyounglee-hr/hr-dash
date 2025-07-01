@@ -3500,19 +3500,12 @@ def main():
             def load_interview_data():
                 """SharePoint에서 면접 현황 데이터를 로드하는 함수"""
                 try:
-                    file_bytes = get_sharepoint_file_bytes("General/00_2. HRmate/임직원 기초 데이터.xlsx")
-                    if not file_bytes:
+                    file_data = get_sharepoint_file_bytes("General/00_2. HRmate/임직원 기초 데이터.xlsx")
+                    if not file_data:
                         return None
-                    drive_items.raise_for_status()
-                    file_info = drive_items.json()
                     
-                    # 파일 다운로드
-                    download_url = file_info['@microsoft.graph.downloadUrl']
-                    file_response = requests.get(download_url)
-                    file_response.raise_for_status()
-
-                    # "채용-면접" 시트 읽기
-                    df = pd.read_excel(BytesIO(file_response.content), sheet_name="채용-면접")
+                    # 파일 데이터 직접 읽기
+                    df = pd.read_excel(file_data, sheet_name="채용-면접")
                     
                     # 면접일자 컬럼 변환
                     if '면접일자' in df.columns:
@@ -4245,4 +4238,4 @@ def load_overtime_base_data():
 
 
 if __name__ == "__main__":
-    main()
+    main() 
