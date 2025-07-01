@@ -631,6 +631,10 @@ def check_user_permission(required_permissions):
 def load_data():
     """SharePoint에서 임직원 기초 데이터를 로드하는 함수"""
     try:
+        # 세션 상태에 데이터가 있으면 그대로 반환
+        if 'sheet1_data' in st.session_state:
+            return st.session_state.sheet1_data
+
         # MSAL 설정
         authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
         app = msal.ConfidentialClientApplication(
@@ -659,7 +663,7 @@ def load_data():
         site_info = site_response.json()
         
         # 파일 경로 (Shared Documents → General 하위)
-        file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+        file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
         drive_items = requests.get(
             f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
             headers=headers
@@ -682,6 +686,9 @@ def load_data():
             (df['구분3'].astype(str) != '0') &
             (df['성명'].astype(str) != '0')
         ].copy()
+        
+        # 데이터를 세션 상태에 저장
+        st.session_state.sheet1_data = df
         
         # 데이터 로드 시간 표시 (한국 시간대 적용)
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
