@@ -395,6 +395,10 @@ st.markdown("""
     [data-testid="stSidebar"] hr {
         margin: 0.5rem 0 !important;
     }
+    /* 텍스트 영역 배경색 변경 */
+    .stTextArea textarea {
+        background-color: #f8f9fa !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -738,6 +742,7 @@ def convert_df_to_excel(df):
 # CSS 스타일 추가
 st.markdown("""
     <style>
+    /* 기존 스타일 유지 */
     [data-testid="stMetricValue"] {
         text-align: right;
     }
@@ -784,7 +789,7 @@ st.markdown("""
     .stRadio [role=radiogroup]{
         padding-top: 0px;
     }
-     /* 사이드바 스타일 추가 */
+    /* 사이드바 스타일 추가 */
     [data-testid="stSidebar"] {
         min-width: 200px !important;
     }
