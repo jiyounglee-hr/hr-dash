@@ -395,10 +395,6 @@ st.markdown("""
     [data-testid="stSidebar"] hr {
         margin: 0.5rem 0 !important;
     }
-    /* 텍스트 영역 배경색 변경 */
-    .stTextArea textarea {
-        background-color: #f8f9fa !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -409,12 +405,15 @@ def login():
     """로그인 처리 함수 - 인증 처리만 담당"""
     if 'user_info' not in st.session_state:
         st.session_state.user_info = None
-    if 'user_permission' not in st.session_state:
-        st.session_state.user_permission = None
     
     # 1. 먼저 세션에 저장된 사용자 정보 확인
-    if st.session_state.user_info is not None and st.session_state.user_permission is not None:
-        return True  # 이미 로그인되어 있고 권한도 있음
+    if st.session_state.user_info is not None:
+        user_email = st.session_state.user_info.get('mail', '')
+        if user_email and check_authorization(user_email):
+            return True  # 이미 로그인되어 있고 권한도 있음
+        else:
+            # 권한이 없거나 이메일이 없는 경우 세션 초기화
+            st.session_state.user_info = None
     
     # 2. URL 파라미터에서 인증 코드 확인 (새로운 로그인 시도)
     query_params = st.query_params
@@ -438,10 +437,8 @@ def login():
                 
                 if 'mail' in graph_data:
                     # 권한 확인
-                    user_permission = get_user_permission(graph_data['mail'])
-                    if user_permission:
+                    if check_authorization(graph_data['mail']):
                         st.session_state.user_info = graph_data
-                        st.session_state.user_permission = user_permission
                         # 자동 리디렉션 플래그 초기화
                         st.session_state.auto_redirect_attempted = False
                         st.success(f"환영합니다, {graph_data.get('displayName', '사용자')}님!")
@@ -452,7 +449,6 @@ def login():
                     else:
                         st.error("권한이 없습니다. 인사팀에 문의하세요.")
                         st.session_state.user_info = None
-                        st.session_state.user_permission = None
                         return False
                 else:
                     st.error("사용자 정보를 가져오는데 실패했습니다.")
@@ -499,7 +495,7 @@ def load_authorized_emails():
         site_info = site_response.json()
         
         # 파일 경로 설정
-        file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+        file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
         
         # 파일 정보 가져오기
         drive_response = requests.get(
@@ -572,7 +568,7 @@ def get_user_permission(email):
         site_info = site_response.json()
         
         # 파일 경로 설정
-        file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+        file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
         
         # 파일 정보 가져오기
         drive_response = requests.get(
@@ -619,13 +615,12 @@ def check_user_permission(required_permissions):
     """
     if 'user_info' not in st.session_state or st.session_state.user_info is None:
         return False
-    
-    if 'user_permission' not in st.session_state or st.session_state.user_permission is None:
-        user_email = st.session_state.user_info.get('mail', '')
-        st.session_state.user_permission = get_user_permission(user_email)
+        
+    user_email = st.session_state.user_info.get('mail', '')  # 'email' 대신 'mail' 사용
+    user_permission = get_user_permission(user_email)
     
     # 사용자의 권한이 required_permissions 리스트에 하나라도 있으면 True 반환
-    return st.session_state.user_permission in required_permissions if st.session_state.user_permission else False
+    return user_permission in required_permissions if user_permission else False
 
 # 로그인 확인 - 제거
 # if not login():
@@ -636,10 +631,6 @@ def check_user_permission(required_permissions):
 def load_data():
     """SharePoint에서 임직원 기초 데이터를 로드하는 함수"""
     try:
-        # 세션 상태에 데이터가 있으면 그대로 반환
-        if 'sheet1_data' in st.session_state:
-            return st.session_state.sheet1_data
-
         # MSAL 설정
         authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
         app = msal.ConfidentialClientApplication(
@@ -668,7 +659,7 @@ def load_data():
         site_info = site_response.json()
         
         # 파일 경로 (Shared Documents → General 하위)
-        file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+        file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
         drive_items = requests.get(
             f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
             headers=headers
@@ -691,9 +682,6 @@ def load_data():
             (df['구분3'].astype(str) != '0') &
             (df['성명'].astype(str) != '0')
         ].copy()
-        
-        # 데이터를 세션 상태에 저장
-        st.session_state.sheet1_data = df
         
         # 데이터 로드 시간 표시 (한국 시간대 적용)
         st.sidebar.markdown("<br>", unsafe_allow_html=True)
@@ -743,7 +731,6 @@ def convert_df_to_excel(df):
 # CSS 스타일 추가
 st.markdown("""
     <style>
-    /* 기존 스타일 유지 */
     [data-testid="stMetricValue"] {
         text-align: right;
     }
@@ -790,7 +777,7 @@ st.markdown("""
     .stRadio [role=radiogroup]{
         padding-top: 0px;
     }
-    /* 사이드바 스타일 추가 */
+     /* 사이드바 스타일 추가 */
     [data-testid="stSidebar"] {
         min-width: 200px !important;
     }
@@ -2491,7 +2478,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 (Shared Documents → General 하위)
-                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -2695,7 +2682,7 @@ def main():
                     site_info = site_response.json()
                     
                     # ✅ 정확한 파일 경로 (Shared Documents → General 하위)
-                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -3352,7 +3339,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 설정
-                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -3566,7 +3553,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 설정
-                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -3712,7 +3699,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 설정
-                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
                     
                     # 파일 정보 가져오기
                     drive_response = requests.get(
