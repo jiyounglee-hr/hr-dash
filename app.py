@@ -495,7 +495,7 @@ def load_authorized_emails():
         site_info = site_response.json()
         
         # 파일 경로 설정
-        file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+        file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
         
         # 파일 정보 가져오기
         drive_response = requests.get(
@@ -568,7 +568,7 @@ def get_user_permission(email):
         site_info = site_response.json()
         
         # 파일 경로 설정
-        file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+        file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
         
         # 파일 정보 가져오기
         drive_response = requests.get(
@@ -2478,7 +2478,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 (Shared Documents → General 하위)
-                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -2682,7 +2682,7 @@ def main():
                     site_info = site_response.json()
                     
                     # ✅ 정확한 파일 경로 (Shared Documents → General 하위)
-                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -3339,7 +3339,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 설정
-                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -3553,7 +3553,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 설정
-                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
                     drive_items = requests.get(
                         f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
                         headers=headers
@@ -3699,7 +3699,7 @@ def main():
                     site_info = site_response.json()
                     
                     # 파일 경로 설정
-                    file_path = "General/05. 임직원/000. 임직원 명부/통계자동화/임직원 기초 데이터.xlsx"
+                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
                     
                     # 파일 정보 가져오기
                     drive_response = requests.get(
