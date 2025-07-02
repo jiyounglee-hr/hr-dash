@@ -1034,7 +1034,7 @@ def main():
                     <style>
                     .link-hover {
                         text-decoration: none !important;
-                        color: #1b1b1e;
+                        color: #1b1b1e !important;
                         font-size: 0.8em; 
                     }
                     .link-hover:hover {
