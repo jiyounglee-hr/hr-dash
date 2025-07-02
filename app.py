@@ -48,7 +48,7 @@ CLIENT_ID = st.secrets["AZURE_AD_CLIENT_ID"]
 TENANT_ID = st.secrets["AZURE_AD_TENANT_ID"]
 CLIENT_SECRET = st.secrets["AZURE_AD_CLIENT_SECRET"]
 # 팀즈 호환성을 위해 REDIRECT_URI를 명확하게 설정
-REDIRECT_URI = "https://hrmate.streamlit.app/"
+REDIRECT_URI = "https://hrmatetest.streamlit.app/"
 
 # MSAL 앱 초기화
 msal_app = msal.ConfidentialClientApplication(
@@ -339,10 +339,6 @@ st.markdown("""
     }
     [data-testid="stMetricLabel"] {
         font-size: 0.8rem !important;
-    }
-    .divider {
-        max-width: 500px;
-        margin: 1rem auto;
     }
     .header-container {
         position: relative;
@@ -713,6 +709,9 @@ def check_user_permission(required_permissions):
 def load_data():
     """SharePoint에서 임직원 기초 데이터를 로드하는 함수"""
     try:
+        # 캐시 키 생성 (현재 시간 기준)
+        cache_key = datetime.now().strftime('%Y%m%d%H%M')
+        
         file_bytes = get_sharepoint_file_bytes("General/00_2. HRmate/임직원 기초 데이터.xlsx")
         if not file_bytes:
             return None
@@ -733,10 +732,6 @@ def load_data():
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
                 
-        # 데이터 로드 시간 표시 (한국 시간대 적용)
-        st.sidebar.markdown("<br>", unsafe_allow_html=True)
-        kst_time = datetime.now(pytz.timezone('Asia/Seoul'))
-        st.sidebar.markdown(f"*마지막 데이터 업데이트: {kst_time.strftime('%Y년 %m월 %d일 %H:%M')}*")
         
         return df
     except Exception as e:
@@ -925,19 +920,18 @@ def main():
     
     if not is_logged_in:
         # 로그인되지 않은 경우 - 자동 리디렉션 또는 로그인 버튼 표시
-        col1, col2, col3 = st.columns([0.2, 0.4, 0.6])
+        col1, col2, col3, col4, col5 = st.columns([0.1, 0.45, 0.05, 0.2, 0.1])
+        with col4:
+            st.markdown("""
+                <div style="position: absolute; top: 20px; right: 20px;">
+                    <img src="https://neurophethr.notion.site/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fe3948c44-a232-43dd-9c54-c4142a1b670b%2Fneruophet_logo.png?table=block&id=893029a6-2091-4dd3-872b-4b7cd8f94384&spaceId=9453ab34-9a3e-45a8-a6b2-ec7f1cefbd7f&width=410&userId=&cache=v2" width="100">
+                </div>
+            """, unsafe_allow_html=True)
+        
         with col2:
             st.markdown("""
-                <div class="header-container">
-                    <div class="logo-container">
-                        <img src="https://neurophethr.notion.site/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Fe3948c44-a232-43dd-9c54-c4142a1b670b%2Fneruophet_logo.png?table=block&id=893029a6-2091-4dd3-872b-4b7cd8f94384&spaceId=9453ab34-9a3e-45a8-a6b2-ec7f1cefbd7f&width=410&userId=&cache=v2" width="100">
-                    </div>
-                    <div class="title-container">
-                        <h1>HRmate</h1>
-                        <p>🔐 아래 버튼을 눌러 Microsoft 계정으로 로그인해 주세요.</p>
-                    </div>
-                </div>
-                <div class="divider"><hr></div>
+                <h2 style="margin-bottom: 0.2em;">HRmate</h2>
+                <hr style="border: none; height: 1px; background-color: #e5e5e5; margin-top: 0.2em; margin-bottom: 1em;">
             """, unsafe_allow_html=True)
         
         # Microsoft 로그인 URL 생성
@@ -947,45 +941,108 @@ def main():
             state=st.session_state.get("_session_id", "")
         )
         
-        # 자동 리디렉션 시도 여부 확인
-        if 'auto_redirect_attempted' not in st.session_state:
-            st.session_state.auto_redirect_attempted = False
-        
         # 로그인 실패 여부 확인 (URL 파라미터에 error가 있는 경우)
         query_params = st.query_params
         has_error = query_params.get("error", None) is not None
         
-        if not st.session_state.auto_redirect_attempted and not has_error:
-            # 로그인 시도 상태 업데이트
-            st.session_state.auto_redirect_attempted = True
-            
-            col1, col2, col3 = st.columns([0.2, 0.4, 0.6])
-            with col2:
-                st.link_button(
-                    "Microsoft 계정으로 로그인",
-                    auth_url,
-                    type="primary",
-                    use_container_width=True
-                )
-            st.stop()
-        else:
-            col1, col2, col3 = st.columns([0.2, 0.4, 0.6])
-            with col2:
-                # 자동 리디렉션이 실패했거나 에러가 있는 경우 수동 버튼 표시
-                if has_error:
-                    st.error("로그인 중 문제가 발생했습니다. 다시 시도해주세요.")
-                else:
-                    st.warning("아래 버튼을 클릭해서 로그인을 먼저 해주세요.") 
-            
-                # st.link_button을 사용하여 직접 링크로 이동
-                st.link_button(
-                    "Microsoft 계정으로 로그인",
-                    auth_url,
-                    type="primary",
-                    use_container_width=True
-                )
-                
-        
+        col1, col2, col3, col4, col5 = st.columns([0.1, 0.45, 0.05, 0.2, 0.1])
+
+        with col2:
+            df = load_data()
+
+            if df is not None:
+                current_employees = df[df['재직상태'] == '재직']
+                regular_count = len(current_employees[current_employees['고용구분'] == '정규직'])
+                contract_count = len(current_employees[current_employees['고용구분'] == '계약직'])
+                total_count = regular_count + contract_count
+                today = datetime.now().strftime('%Y-%m-%d')
+
+                # 전체 박스를 st.container로 감싸고, 스타일은 CSS로 지정
+                with st.container():
+                    st.markdown("""
+                        <style>
+                        div[data-baseweb="input"] {
+                            width: 40% !important;
+                            margin-top: 10px;
+                        }
+                        div[data-baseweb="input"] input {
+                            background-color: #f5f5f5 !important;
+                            border-radius: 6px;
+                            padding: 6px 10px;
+                        }
+                        </style>
+                        <div class="box">
+                    """, unsafe_allow_html=True)
+
+                    # 🔼 이 div는 닫지 않고 st 컴포넌트로 계속 이어줌!
+
+                    st.markdown(f"###### 👥 인원 현황 ({today})")
+                    st.markdown(f"정규직: {regular_count}명 | 계약직: {contract_count}명 | 전체: {total_count}명")
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    st.markdown("###### 🔎 연락처 검색")
+
+                    search_name = st.text_input("성명으로 검색", key="contact_search")
+
+                    if search_name:
+                        search_result = current_employees[current_employees['성명'].str.contains(search_name, na=False)]
+                        if not search_result.empty:
+                            result_df = search_result[['성명', '본부', '팀', '직위', 'E-Mail', '핸드폰']]
+                            st.dataframe(result_df, hide_index=True)
+                        else:
+                            st.info("검색 결과가 없습니다.")
+
+                    # 마지막에 닫기
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    
+        with col4:
+            # 작은 글씨 스타일 추가
+            st.markdown("""
+                <style>
+                .small-text {
+                    font-size: 0.8em; 
+                    color: #666;
+                    text-align: left;
+                    margin-bottom: 5px;
+                }
+                </style>
+                <div class="small-text">
+                    🔐 로그인 후 상세 HR정보를 확인하실 수 있습니다.
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.link_button(
+                "Microsoft 계정으로 로그인",
+                auth_url,
+                type="primary",
+                use_container_width=True
+            )
+            # 자동 리디렉션이 실패했거나 에러가 있는 경우 수동 버튼 표시
+            if has_error:
+                st.error("로그인 중 문제가 발생했습니다. 다시 시도해주세요.")
+
+                            
+            with st.container():
+                st.markdown("""
+                    <div style="border: 1px solid #f2f2f2; padding: 12px; border-radius: 10px; background-color: #ffffff;">
+                        <p> HR 관련 사이트 바로 가기</p>
+                        <p><a href="https://career.neurophet.com/works" target="_blank" class="link-hover">▫️ 뉴로웍스 ↗️</a></p>
+                        <p><a href="https://career.neurophet.com/" target="_blank" class="link-hover">▫️ 뉴로핏커리어 ↗️</a></p> 
+                        <p><a href="https://neurophet.sharepoint.com/sites/HR2/SitePages/%EC%B1%84%EC%9A%A9-%EC%A0%84%ED%98%95%EA%B4%80%EB%A6%AC.aspx" target="_blank" class="link-hover">▫️ 면접관용 가이드 및 채용전형 관리 ↗️</a></p>
+                    </div>
+
+                    <style>
+                    .link-hover {
+                        text-decoration: none !important;
+                        color: #1b1b1e;
+                        font-size: 0.8em; 
+                    }
+                    .link-hover:hover {
+                        text-decoration: underline;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+
         st.stop()
     
     # 주요 파일들의 수정 여부 확인 (첫 페이지 로드시에만)
