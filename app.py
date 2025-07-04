@@ -992,6 +992,31 @@ def main():
                         else:
                             st.info("검색 결과가 없습니다.")
 
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    st.markdown("###### 🎂 이달의 생일")
+                    
+                    # 현재 월 구하기
+                    current_month = datetime.now().month
+                    
+                    # 생일자 필터링
+                    birthday_employees = current_employees[pd.to_datetime(current_employees['생년월일']).dt.month == current_month]
+                    
+                    if not birthday_employees.empty:
+                        # 생일 날짜 순으로 정렬
+                        birthday_employees['생일일자'] = pd.to_datetime(birthday_employees['생년월일']).dt.day
+                        birthday_employees = birthday_employees.sort_values('생일일자')
+                        
+                        # 표시할 데이터프레임 생성
+                        birthday_df = birthday_employees[['성명', '본부', '팀', '직위', '생년월일']].copy()
+                        
+                        # 생일 포맷 변경 (월/일)
+                        birthday_df['생일'] = pd.to_datetime(birthday_df['생년월일']).dt.strftime('%m/%d')
+                        birthday_df = birthday_df[['성명', '본부', '팀', '직위', '생일']]
+                        
+                        st.dataframe(birthday_df, hide_index=True)
+                    else:
+                        st.info("이번 달 생일자가 없습니다.")
+
                     # 마지막에 닫기
                     st.markdown("</div>", unsafe_allow_html=True)
                     
@@ -1020,7 +1045,6 @@ def main():
             # 자동 리디렉션이 실패했거나 에러가 있는 경우 수동 버튼 표시
             if has_error:
                 st.error("로그인 중 문제가 발생했습니다. 다시 시도해주세요.")
-
                             
             with st.container():
                 st.markdown("""
