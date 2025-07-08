@@ -461,7 +461,6 @@ def login():
     return False
 
 # SharePoint Graph API 공통 함수
-@st.cache_data(ttl=3600)  # 1시간 캐시 유지
 def get_sharepoint_access_token():
     """SharePoint 액세스 토큰을 가져오는 함수"""
     if 'access_token' in st.session_state and 'token_expiry' in st.session_state:
@@ -492,7 +491,6 @@ def get_sharepoint_access_token():
         st.error(f"액세스 토큰을 가져오는 중 오류가 발생했습니다: {str(e)}")
         return None
 
-@st.cache_data(ttl=3600)  # 1시간 캐시 유지
 def get_sharepoint_site_info():
     """SharePoint 사이트 정보를 가져오는 함수"""
     if 'site_info' in st.session_state:
@@ -765,7 +763,6 @@ def convert_date(date_value):
         return pd.NaT
 
 # 엑셀 다운로드 함수 캐싱
-@st.cache_data(ttl=3600)  # 1시간 캐시 유지
 def convert_df_to_excel(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -859,19 +856,24 @@ if 'user_info' in st.session_state and st.session_state.user_info is not None:
     st.sidebar.markdown("#### HR Data")
     
     # HR, C-LEVEL, Director 권한 메뉴
-    if check_user_permission(['HR', 'C-LEVEL', 'Director']):
+    if check_user_permission(['HR', 'C-LEVEL', 'Director', '경영지원', '과제담당']):
         if st.sidebar.button("📊 인원현황", use_container_width=True):
             st.session_state.menu = "📊 인원현황"
         if st.sidebar.button("📈 연도별 인원 통계", use_container_width=True):
             st.session_state.menu = "📈 연도별 인원 통계"
+    if check_user_permission(['HR', 'C-LEVEL', 'Director']):
         if st.sidebar.button("🚀 채용현황", use_container_width=True):
             st.session_state.menu = "🚀 채용현황"
         if st.sidebar.button("🔔 인사팀 업무 공유", use_container_width=True):
             st.session_state.menu = "🔔 인사팀 업무 공유"
     # HR, C-LEVEL 권한 메뉴
-    if check_user_permission(['HR', 'C-LEVEL']):
+    if check_user_permission(['HR', 'C-LEVEL', '경영지원']):
         if st.sidebar.button("😊 임직원 명부", use_container_width=True):
             st.session_state.menu = "😊 임직원 명부"
+    if check_user_permission(['HR', '과제담당']):
+        if st.sidebar.button("😊 임직원 명부(과제용)", use_container_width=True):
+            st.session_state.menu = "😊 임직원 명부(과제용)"
+    if check_user_permission(['HR', 'C-LEVEL']):
         if st.sidebar.button("🏦 기관제출용 인원현황", use_container_width=True):
             st.session_state.menu = "🏦 기관제출용 인원현황"
         if st.sidebar.button("🔍 연락처/생일 검색", use_container_width=True):
@@ -2577,78 +2579,7 @@ def main():
             
             with col5:
                 show_department_history = st.checkbox("해당 시점부서 추가")
-            
-            # 데이터 로드
-            @st.cache_data
-            def load_employee_data():
-                """SharePoint에서 임직원 기초 데이터를 로드하는 함수"""
-                try:
-                    # MSAL 설정
-                    authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
-                    app = msal.ConfidentialClientApplication(
-                        client_id=st.secrets['AZURE_AD_CLIENT_ID'],
-                        client_credential=st.secrets['AZURE_AD_CLIENT_SECRET'],
-                        authority=authority
-                    )
-
-                    # 토큰 받기
-                    scopes = ["https://graph.microsoft.com/.default"]
-                    result = app.acquire_token_for_client(scopes=scopes)
-                    
-                    if "access_token" not in result:
-                        st.error("토큰을 받아오는데 실패했습니다.")
-                        return None, None
-                        
-                    access_token = result['access_token']
-                    headers = {'Authorization': f'Bearer {access_token}'}
-                    
-                    # 사이트 정보 가져오기
-                    site_response = requests.get(
-                        "https://graph.microsoft.com/v1.0/sites/neurophet.sharepoint.com:/sites/team.hr",
-                        headers=headers
-                    )
-                    site_response.raise_for_status()
-                    site_info = site_response.json()
-                    
-                    # 파일 경로 (Shared Documents → General 하위)
-                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
-                    drive_items = requests.get(
-                        f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
-                        headers=headers
-                    )
-                    drive_items.raise_for_status()
-                    file_info = drive_items.json()
-                    
-                    # 파일 다운로드
-                    download_url = file_info['@microsoft.graph.downloadUrl']
-                    file_response = requests.get(download_url)
-                    file_response.raise_for_status()
-
-                    # Sheet1과 Sheet2 읽기
-                    df = pd.read_excel(BytesIO(file_response.content), sheet_name="Sheet1")
-                    df_history = pd.read_excel(BytesIO(file_response.content), sheet_name="Sheet2")
-                    
-                    # 컬럼 이름 재정의
-                    df.columns = df.columns.str.strip()  # 컬럼 이름의 공백 제거
-                    df_history.columns = df_history.columns.str.strip()  # 컬럼 이름의 공백 제거
-                    
-                    # 날짜 컬럼 형식 통일
-                    date_columns = ['입사일', '퇴사일', '발령일']
-                    for col in date_columns:
-                        if col in df.columns:
-                            df[col] = pd.to_datetime(df[col], errors='coerce')
-                        if col in df_history.columns:
-                            df_history[col] = pd.to_datetime(df_history[col], errors='coerce')
-                    
-                    # None 값 처리
-                    df = df.fillna('')
-                    df_history = df_history.fillna('')
-                    
-                    return df, df_history
-                except Exception as e:
-                    st.error(f"임직원 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
-                    return None, None
-            
+            # 데이터 로드            
             df, df_history = load_employee_data()
             
             # 조회일자 기준으로 재직중인 직원 필터링
@@ -2667,12 +2598,15 @@ def main():
             df_history_filtered = df_history_filtered.sort_values('발령일').groupby('성명').last().reset_index()
             
             # 기본 컬럼 설정
-            se_columns = [
+            base_columns = [
                 "사번", "성명", "본부", "팀", "직무", "직위", "직책", "입사일", 
                 "재직기간", "정규직전환일", "고용구분", "재직상태", "생년월일", 
-                "남/여", "만나이", "퇴사일", "학력", "최종학교", "전공", 
-                "경력사항", "휴직상태"
+                "남/여", "만나이", "퇴사일", "휴직상태"
             ]
+            
+            # 권한에 따른 컬럼 설정
+            additional_columns = ["학력", "최종학교", "전공", "경력사항"]
+            se_columns = base_columns + ([] if check_user_permission(['경영지원']) else additional_columns)
             
             history_columns = [
                 "발령일", "구분", "성명", "변경후_본부",  "변경후_팀", "변경후_직책"
@@ -2763,13 +2697,7 @@ def main():
             )
             
             # 엑셀 다운로드 버튼
-            @st.cache_data
-            def convert_df_to_excel(df):
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df.to_excel(writer, index=False, sheet_name='임직원명부')
-                processed_data = output.getvalue()
-                return processed_data
+
             
             excel_data = convert_df_to_excel(df_display)
             st.download_button(
@@ -2884,13 +2812,7 @@ def main():
                     st.warning("조회된 데이터가 없습니다.")
                 
                 # 엑셀 다운로드 버튼
-                @st.cache_data
-                def convert_df_to_excel(df):
-                    output = BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df.to_excel(writer, index=False, sheet_name='인사발령내역')
-                    processed_data = output.getvalue()
-                    return processed_data
+                # 전역 함수 사용
                 
                 excel_data = convert_df_to_excel(df_display)
                 st.download_button(
@@ -3687,73 +3609,101 @@ def main():
             st.markdown("##### 💡 지원자 접수 통계")
             
             # 지원자 통계 데이터 로드
-            @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
+            @st.cache_data
             def load_applicant_stats():
                 try:
-                    # MSAL 설정
-                    authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
-                    app = msal.ConfidentialClientApplication(
-                        client_id=st.secrets['AZURE_AD_CLIENT_ID'],
-                        client_credential=st.secrets['AZURE_AD_CLIENT_SECRET'],
-                        authority=authority
-                    )
-
-                    # 토큰 받기
-                    scopes = ["https://graph.microsoft.com/.default"]
-                    result = app.acquire_token_for_client(scopes=scopes)
+                    # 현재 디렉토리에서 엑셀 파일 경로 설정
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
                     
-                    if "access_token" not in result:
-                        st.error("토큰을 받아오는데 실패했습니다.")
+                    
+                    # 파일 존재 여부 확인
+                    if not os.path.exists(file_path):
+                        st.error(f"파일을 찾을 수 없습니다: {file_path}")
                         return None
+                    
+                    try:
+                        # 시트 목록 확인
+                        xls = pd.ExcelFile(file_path)
                         
-                    access_token = result['access_token']
-                    headers = {'Authorization': f'Bearer {access_token}'}
+                        # 엑셀 파일 읽기
+                        df = pd.read_excel(file_path, sheet_name="채용-지원자")
+                        
+                        if df.empty:
+                            return None
+                            
+                        # 필수 컬럼 확인
+                        required_columns = ['성명', '등록날짜', '접수방법', '전형 결과']
+                        missing_columns = [col for col in required_columns if col not in df.columns]
+                        if missing_columns:
+                            st.error(f"필수 컬럼이 없습니다: {', '.join(missing_columns)}")
+                            return None
+                        
+                        # 성명이 유효하지 않은 행 제거
+                        df = df[
+                            (df['성명'].notna()) &  # null이 아닌 값
+                            (df['성명'].astype(str).str.strip() != '') &  # 빈 문자열이 아닌 값
+                            (df['성명'].astype(str).str.strip() != '0')  # '0'이 아닌 값
+                        ]
+                                                
+                        if len(df) == 0:
+                            st.warning("유효한 데이터가 없습니다.")
+                            return None
+                            
+                    except Exception as e:
+                        st.error(f"엑셀 파일 읽기 오류: {str(e)}")
+                        return None
                     
-                    # 사이트 정보 가져오기
-                    site_response = requests.get(
-                        "https://graph.microsoft.com/v1.0/sites/neurophet.sharepoint.com:/sites/team.hr",
-                        headers=headers
-                    )
-                    site_response.raise_for_status()
-                    site_info = site_response.json()
+                    # 등록날짜 처리
+                    try:
+                        # 먼저 pd.to_datetime으로 직접 변환 시도
+                        df['등록날짜'] = pd.to_datetime(df['등록날짜'], errors='coerce')
+                        
+                        # 변환 실패한 값들에 대해 추가 처리
+                        mask = df['등록날짜'].isna()
+                        if mask.any():
+                            def convert_to_datetime(x):
+                                if pd.isna(x):
+                                    return pd.NaT
+                                try:
+                                    # 엑셀 숫자 형식의 날짜 처리
+                                    if isinstance(x, (int, float)):
+                                        return pd.Timestamp('1899-12-30') + pd.Timedelta(days=int(x))
+                                    elif isinstance(x, datetime.time):
+                                        # time 형식인 경우 오늘 날짜와 결합
+                                        return pd.Timestamp.combine(pd.Timestamp.today().date(), x)
+                                    elif isinstance(x, (datetime, pd.Timestamp)):
+                                        return pd.Timestamp(x)
+                                    
+                                    # 문자열로 변환
+                                    date_str = str(x)
+                                    
+                                    # 여러 날짜 형식 시도
+                                    formats = ['%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d', '%Y%m%d']
+                                    for fmt in formats:
+                                        try:
+                                            return pd.to_datetime(date_str, format=fmt)
+                                        except:
+                                            continue
+                                    
+                                    return pd.NaT
+                                except:
+                                    return pd.NaT
+                            
+                            # NaN 값만 추가 처리
+                            df.loc[mask, '등록날짜'] = df.loc[mask, '등록날짜'].apply(convert_to_datetime)
+                        
+                        # 연도 추출 (NaN 값은 0으로 처리)
+                        df['지원연도'] = df['등록날짜'].dt.year.fillna(0).astype(int)
+                    except Exception as e:
+                        st.error(f"날짜 변환 중 오류 발생: {str(e)}")
+                        # 오류 발생 시 빈 연도 컬럼 생성
+                        df['지원연도'] = 0
                     
-                    # 파일 경로 설정
-                    file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
-                    
-                    # 파일 정보 가져오기
-                    drive_response = requests.get(
-                        f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive",
-                        headers=headers
-                    )
-                    drive_response.raise_for_status()
-                    drive_info = drive_response.json()
-                    
-                    # 파일 다운로드 URL 가져오기
-                    file_response = requests.get(
-                        f"https://graph.microsoft.com/v1.0/drives/{drive_info['id']}/root:/{file_path}",
-                        headers=headers
-                    )
-                    file_response.raise_for_status()
-                    file_info = file_response.json()
-                    
-                    # 파일 다운로드
-                    download_response = requests.get(
-                        file_info['@microsoft.graph.downloadUrl']
-                    )
-                    download_response.raise_for_status()
-                    
-                    # 엑셀 파일 읽기
-                    excel_data = io.BytesIO(download_response.content)
-                    df = pd.read_excel(excel_data, sheet_name="채용-지원자")
-                    
-                    # 성명이 0인 행 제거
-                    df = df[df['성명'] != 0]
-                    df = df[df['성명'] != '0']
-                    
-                    # 등록날짜에서 연도 추출
-                    df['지원연도'] = pd.to_datetime(df['등록날짜']).dt.year
-                    
+                    # 데이터를 세션에 저장
+                    st.session_state['applicant_stats_data'] = df
                     return df
+                    
                 except Exception as e:
                     st.error(f"지원자 통계 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
                     return None
@@ -4160,38 +4110,210 @@ def main():
                 st.info("엑셀 파일을 업로드해주세요. ('스톡옵션안내'와 'ST코드' 시트가 필요합니다)")
 
 
-
-        elif menu == "📊 인사 통계":
-            st.markdown("##### 📊 인사 통계")
+        elif menu == "😊 임직원 명부(과제용)":
+            st.markdown("##### 😊 임직원 명부(과제용)")
+            # 조회 조건
+            col1, col2, col3, col4, col5, col6 = st.columns(6)
             
-            # 인사 통계 데이터 로드
-            @st.cache_data(ttl=300)  # 5분마다 캐시 갱신
-            def load_hr_stats():
-                try:
-                    # 현재 디렉토리에서 엑셀 파일 경로 설정
-                    current_dir = os.path.dirname(os.path.abspath(__file__))
-                    file_path = os.path.join(current_dir, "임직원 기초 데이터.xlsx")
-                    
-                    # 엑셀 파일에서 "인사-통계" 시트 읽기
-                    df = pd.read_excel(file_path, sheet_name="인사-통계")
-                    
-                    # 컬럼 이름 재정의
-                    df.columns = df.columns.str.strip()
-                    
-                    return df
-                except Exception as e:
-                    st.error(f"인사 통계 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
-                    return None
+            with col1:
+                  research_lab_options = ['전체', '연구소장', '전담요원', '보조원', '관리직원']
+                  selected_research_labs = st.multiselect(
+                      "기업부설연구소구분",
+                      options=research_lab_options,
+                  )
 
+            with col2:
+                query_date = st.date_input("조회일자", datetime.now())
+            
+            with col3:
+                name = st.text_input("성명")
+            
+            with col4:
+                employment_type = st.selectbox(
+                    "고용구분",
+                    ["전체", "정규직", "계약직"]
+                )
+            
+            with col5:
+                employment_status = st.selectbox(
+                    "재직상태",
+                    ["전체", "재직", "퇴직"]
+                )
+              
+            with col6:
+                show_department_history = st.checkbox("해당 시점부서 추가")
+            
             # 데이터 로드
-            hr_stats_df = load_hr_stats()
+            df, df_history = load_employee_data()
+            salary_df = load_salary_data()
             
-            if hr_stats_df is not None and not hr_stats_df.empty:
-                # 인사 통계 데이터 표시
-                st.dataframe(hr_stats_df, use_container_width=True)
+            # 기업부설연구소구분의 빈 값과 '0' 값을 '-'로 변경
+            df['기업부설연구소구분'] = df['기업부설연구소구분'].fillna('-')
+            df.loc[df['기업부설연구소구분'].isin(['0', 0, '', ' ']), '기업부설연구소구분'] = '-'
+            
+            # 필터링 적용
+            if name:
+                # 이름 검색 전에 데이터가 있는지 확인
+                if not df.empty and '성명' in df.columns:
+                    # 성명 컬럼의 값을 문자열로 변환하고 빈 값을 처리
+                    df['성명'] = df['성명'].fillna('').astype(str)
+                    df = df[df['성명'].str.contains(name, na=False)]
+                else:
+                    df = pd.DataFrame()  # 빈 데이터프레임 반환
+            
+            if employment_type != "전체":
+                if not df.empty and '고용구분' in df.columns:
+                    df = df[df['고용구분'] == employment_type]
+                
+            if employment_status != "전체":
+                df = df[df['재직상태'] == employment_status]
+            
+            # 기업부설연구소 구분 필터링
+            if selected_research_labs and '전체' not in selected_research_labs:
+                df = df[df['기업부설연구소구분'].isin(selected_research_labs)]
+            
+            # 연봉 데이터 처리
+            if salary_df is not None:
+                # 연봉 데이터와 병합 전에 성명이 있는지 확인
+                df['계약 연봉'] = 0  # 기본값 설정
+                df['급여'] = 0  # 기본값 설정
+                
+                # salary_df에 있는 성명만 연봉 정보 업데이트
+                for idx, row in df.iterrows():
+                    if row['성명'] in salary_df['성명'].values:
+                        salary_info = salary_df[salary_df['성명'] == row['성명']].iloc[0]
+                        df.at[idx, '계약 연봉'] = salary_info['계약 연봉']
+                        df.at[idx, '급여'] = np.ceil(salary_info['계약 연봉'] / 12)
+                
+                # 천 단위 구분자로 표시
+                df['계약 연봉'] = df['계약 연봉'].apply(lambda x: '{:,.0f}'.format(x))
+                df['급여'] = df['급여'].apply(lambda x: '{:,.0f}'.format(x))
             else:
-                st.warning("인사 통계 데이터를 불러올 수 없습니다.")
-
+                # 연봉 데이터가 없는 경우 빈 컬럼 추가
+                df['계약 연봉'] = np.nan
+                df['급여'] = np.nan
+            
+            # 조회일자 기준으로 재직중인 직원 필터링
+            df = df[
+                (df['입사일'] <= pd.Timestamp(query_date)) &  # 입사일이 조회일자 이전
+                (
+                    (df['퇴사일'].isna()) |  # 퇴사일이 없는 경우
+                    (df['퇴사일'] >= pd.Timestamp(query_date))  # 퇴사일이 조회일자 이후
+                )
+            ]
+            
+            # 조회일자 기준으로 인사발령 데이터 필터링
+            df_history_filtered = df_history[df_history['발령일'] <= pd.Timestamp(query_date)]
+            
+            # 각 직원별 가장 최근 발령 데이터만 선택
+            df_history_filtered = df_history_filtered.sort_values('발령일').groupby('성명').last().reset_index()
+            
+                                      # 기본 컬럼 설정
+            base_columns = [
+                "기업부설연구소구분", "성명", "본부", "실", "팀", "직무", "직위", "입사일", "주민등록번호", 
+                "남/여", "E-Mail", "학력", "최종학교", "전공", "학위번호", "졸업연도", 
+                "핸드폰",  "본점/지점", "국가기술인번호", 
+                "고용구분", "영문이름", "한자", "계약 연봉", "급여"
+            ]         
+             # 권한에 따른 컬럼 설정
+            se_columns = base_columns
+                        
+            history_columns = [
+                "발령일", "구분", "성명", "변경후_본부",  "변경후_팀", "변경후_직책"
+            ]
+            
+            # 재직기간 계산 함수
+            def calculate_employment_period(row):
+                if pd.isna(row['입사일']):
+                    return None
+                
+                start_date = pd.to_datetime(row['입사일'])
+                
+                # 재직상태가 '퇴직'인 경우 퇴사일을 기준으로 계산
+                if row['재직상태'] == '퇴직' and pd.notna(row['퇴사일']):
+                    end_date = pd.to_datetime(row['퇴사일'])
+                else:
+                    # 그 외의 경우 조회일자를 기준으로 계산
+                    end_date = pd.Timestamp(query_date)
+                
+                years = (end_date - start_date).days // 365
+                months = ((end_date - start_date).days % 365) // 30
+                
+                return f"{years}년 {months}개월"
+            
+            # 데이터 필터링
+            if name:
+                df = df[df['성명'].str.contains(name, na=False)]
+            
+            if employment_type != "전체":
+                df = df[df['고용구분'] == employment_type]
+            
+            if employment_status != "전체":
+                df = df[df['재직상태'] == employment_status]
+            
+            # 재직기간 계산
+            df['재직기간'] = df.apply(calculate_employment_period, axis=1)
+            
+            # 부서 이력 데이터 처리
+            if show_department_history:
+                # 인사발령 데이터와 조인
+                df_merged = pd.merge(
+                    df, 
+                    df_history_filtered, 
+                    left_on='성명', 
+                    right_on='성명', 
+                    how='left',
+                    suffixes=('', '_history')  # 중복 컬럼에 접미사 추가
+                )
+                
+                # 발령이 없는 경우 기본값 설정
+                df_merged['변경후_본부'] = df_merged['변경후_본부'].fillna(df_merged['본부'])
+                df_merged['변경후_팀'] = df_merged['변경후_팀'].fillna(df_merged['팀'])
+                df_merged['변경후_직책'] = df_merged['변경후_직책'].fillna(df_merged['직책'])
+                
+                # 컬럼 순서 조정
+                display_columns = se_columns + [col for col in history_columns if col not in se_columns]
+                df_display = df_merged[display_columns]
+            else:
+                df_display = df[se_columns]
+            
+            # 데이터 표시
+            df_display = df_display.reset_index(drop=True)
+            df_display.index = df_display.index + 1
+            df_display = df_display.reset_index()
+            df_display = df_display.rename(columns={'index': 'No'})
+            
+            # 날짜 컬럼의 시간 제거
+            date_columns = ['정규직전환일', '입사일', '퇴사일', '생년월일', '발령일']
+            for col in date_columns:
+                if col in df_display.columns:
+                    df_display[col] = pd.to_datetime(df_display[col]).dt.date
+            
+            # 데이터 수에 따라 높이 동적 조정 (행당 35픽셀)
+            row_height = 35  # 각 행의 예상 높이
+            min_height = 60 # 최소 높이
+            max_height = 800  # 최대 높이
+            calculated_height = min(max(min_height, len(df_display) * row_height), max_height)
+            
+            st.dataframe(
+                df_display,
+                height=calculated_height,
+                use_container_width=True,
+                hide_index=True
+            )
+            st.markdown("<br>", unsafe_allow_html=True)                
+            # 엑셀 다운로드 버튼
+            if not df_display.empty:
+                excel_data = convert_df_to_excel(df_display)
+                download_filename = f"임직원명부_{query_date.strftime('%Y%m%d')}.xlsx"
+                
+                st.download_button(
+                    label="📥 엑셀 다운로드",
+                    data=excel_data,
+                    file_name=download_filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            
         elif menu == "🎫 명함발급":
             st.markdown("##### 🎫 명함발급")
             
@@ -4300,6 +4422,37 @@ def load_business_card_application_data():
         st.error(f"명함 신청서 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
         return None 
 
+# 연봉 데이터 로드
+def load_salary_data():
+    """SharePoint에서 연봉 데이터를 로드하는 함수"""
+    try:
+        file_bytes = get_sharepoint_file_bytes("General/00_2. HRmate/hrmate권한.xlsx")
+        if file_bytes is None:
+            return None
+            
+        # 엑셀 파일의 모든 시트 이름 확인
+        xls = pd.ExcelFile(file_bytes)
+        sheet_names = xls.sheet_names
+        
+        # '연봉' 시트가 있는지 확인
+        if '연봉' not in sheet_names:
+            st.warning("연봉 시트를 찾을 수 없습니다.")
+            return None
+        
+        # 연봉 시트 읽기
+        df = pd.read_excel(file_bytes, sheet_name='연봉')
+        
+        
+        # 필요한 컬럼이 있는지 확인
+        if '성명' not in df.columns or '계약 연봉' not in df.columns:
+            st.warning("연봉 데이터에 필요한 컬럼(성명, 계약 연봉)이 없습니다.")
+            return None
+            
+        return df[['성명', '계약 연봉']]
+    except Exception as e:
+        st.error(f"연봉 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+        return None
+
 # 초과근무 데이터 로드
 def load_overtime_base_data():
     """SharePoint '초과근무기초데이터.xlsx'의 '근태신청관리 다운로드' 시트 로딩"""
@@ -4317,6 +4470,76 @@ def load_overtime_base_data():
         st.error(f"초과근무 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
         return None
 
+# 임직원 데이터 로드
+@st.cache_data
+def load_employee_data():
+    """SharePoint에서 임직원 기초 데이터를 로드하는 함수"""
+    try:
+        # MSAL 설정
+        authority = f"https://login.microsoftonline.com/{st.secrets['AZURE_AD_TENANT_ID']}"
+        app = msal.ConfidentialClientApplication(
+            client_id=st.secrets['AZURE_AD_CLIENT_ID'],
+            client_credential=st.secrets['AZURE_AD_CLIENT_SECRET'],
+            authority=authority
+        )
+
+        # 토큰 받기
+        scopes = ["https://graph.microsoft.com/.default"]
+        result = app.acquire_token_for_client(scopes=scopes)
+        
+        if "access_token" not in result:
+            st.error("토큰을 받아오는데 실패했습니다.")
+            return None, None
+            
+        access_token = result['access_token']
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        # 사이트 정보 가져오기
+        site_response = requests.get(
+            "https://graph.microsoft.com/v1.0/sites/neurophet.sharepoint.com:/sites/team.hr",
+            headers=headers
+        )
+        site_response.raise_for_status()
+        site_info = site_response.json()
+        
+        # 파일 경로 (Shared Documents → General 하위)
+        file_path = "General/00_2. HRmate/임직원 기초 데이터.xlsx"
+        drive_items = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_info['id']}/drive/root:/{file_path}",
+            headers=headers
+        )
+        drive_items.raise_for_status()
+        file_info = drive_items.json()
+        
+        # 파일 다운로드
+        download_url = file_info['@microsoft.graph.downloadUrl']
+        file_response = requests.get(download_url)
+        file_response.raise_for_status()
+
+        # Sheet1과 Sheet2 읽기
+        df = pd.read_excel(BytesIO(file_response.content), sheet_name="Sheet1")
+        df_history = pd.read_excel(BytesIO(file_response.content), sheet_name="Sheet2")
+        
+        # 컬럼 이름 재정의
+        df.columns = df.columns.str.strip()  # 컬럼 이름의 공백 제거
+        df_history.columns = df_history.columns.str.strip()  # 컬럼 이름의 공백 제거
+        
+        # 날짜 컬럼 형식 통일
+        date_columns = ['입사일', '퇴사일', '발령일']
+        for col in date_columns:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+            if col in df_history.columns:
+                df_history[col] = pd.to_datetime(df_history[col], errors='coerce')
+        
+        # None 값 처리
+        df = df.fillna('')
+        df_history = df_history.fillna('')
+        
+        return df, df_history
+    except Exception as e:
+        st.error(f"임직원 데이터를 불러오는 중 오류가 발생했습니다: {str(e)}")
+        return None, None
 
 if __name__ == "__main__":
     main() 
