@@ -4116,7 +4116,7 @@ def main():
             col1, col2, col3, col4, col5, col6 = st.columns(6)
             
             with col1:
-                  research_lab_options = ['전체', '연구소장', '전담요원', '보조원', '관리직원']
+                  research_lab_options = ['연구소장', '전담요원', '보조원', '관리직원']
                   selected_research_labs = st.multiselect(
                       "기업부설연구소구분",
                       options=research_lab_options,
